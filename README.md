@@ -1,3 +1,53 @@
+# About This Fork
+
+This repository is a personal fork and modification of **Create: Power Grid** by **patryk3211**.
+
+The purpose of this fork is to port the **Minecraft 1.20.1 version of Create: Power Grid, including modifications developed in my separate 1.20.1 repository, to Minecraft 1.21.1 with NeoForge**.
+
+The 1.20.1 version containing my previous modifications can be found in my separate repository:
+
+**https://github.com/ohnokogikawaii/Chat-GPT_powergrid**
+
+## Important Notice
+
+This is a **personal, independently maintained fork**. It is currently under active development and may contain bugs, insufficient testing, incomplete debugging, missing translations, or other issues.
+
+Some features may not work as intended, and compatibility with other mods has not necessarily been tested.
+
+If you find a bug, have a suggestion, notice a translation problem, or have an idea for improving the code, please feel free to send advice or feedback through the **GitHub contact email associated with this repository**.
+
+I am still relatively new to Java and Minecraft mod development. Therefore, **constructive advice, code reviews, technical explanations, and suggestions for better implementation are very welcome**.
+
+## Use of AI
+
+**ChatGPT and other AI-assisted development tools are used during the development of this fork.**
+
+AI is used for tasks such as understanding existing code, investigating errors, proposing implementations, refactoring, and assisting with the porting process.
+
+AI-generated suggestions are reviewed, modified, tested, and integrated as appropriate. However, because I am still learning Java and Minecraft mod development, some code may contain mistakes or inefficient implementations.
+
+If you notice something that could be improved, technical feedback is welcome.
+
+## Development Status
+
+This fork should be considered **experimental and under development**.
+
+Features, internal implementations, APIs, and configuration may change without notice while the 1.21.1 NeoForge port is being developed.
+
+Please report reproducible bugs with as much information as possible, such as:
+
+* Minecraft version
+* NeoForge version
+* Create version
+* Power Grid version
+* Other installed mods
+* Steps to reproduce the problem
+* Crash logs or relevant log output
+* Screenshots or videos when useful
+
+Thank you for helping improve the project.
+
+
 <p align="center">
     <img src="./src/main/resources/assets/powergrid/icon.png" alt="Logo" width="200">
 </p>
