@@ -107,6 +107,15 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
         setDirty();
     }
 
+    private final Set<TransmissionLinePart> pendingTransmissionLineRepair =
+            Collections.newSetFromMap(new IdentityHashMap<>());
+
+    public void queueTransmissionLineRepair(TransmissionLinePart part) {
+        if (part != null) {
+            pendingTransmissionLineRepair.add(part);
+        }
+    }
+
     @Override
     public void lineDisconnected(TransmissionLine line) {
         transmissionLines.remove(line.getId());
@@ -242,7 +251,12 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
             part.refreshEndpointNodes();
             return true;
         });
+
+        repairPendingTransmissionLines();
+
         JunctionWireEndpoint.processNewNodes(world);
+
+        // 以下は既存コード
 
         runningDiscovery = true;
         for(var network : islandDiscoveryQueue) {
@@ -283,6 +297,7 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                 network.singleTick();
             }
         }
+
         perf.end();
     }
 
@@ -1386,6 +1401,61 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
         public void addCoupling(Island connectedIsland, TransmissionLine line) {
             couplings.computeIfAbsent(CouplingKey.of(this, connectedIsland), $ -> new HashSet<>())
                     .add(line);
+        }
+    }
+
+    private void repairPendingTransmissionLines() {
+        if (pendingTransmissionLineRepair.isEmpty()) {
+            return;
+        }
+
+        var iterator = pendingTransmissionLineRepair.iterator();
+
+        while (iterator.hasNext()) {
+            var part = iterator.next();
+
+            if (part == null) {
+                iterator.remove();
+                continue;
+            }
+
+            if (part.getLine() != null) {
+                iterator.remove();
+                continue;
+            }
+
+            try {
+                part.refreshEndpointNodes();
+
+                if (part.getLine() != null) {
+                    iterator.remove();
+                    continue;
+                }
+
+                var endpoint1 = part.getEndpoint1();
+                var endpoint2 = part.getEndpoint2();
+
+                if (endpoint1 == null || endpoint2 == null) {
+                    continue;
+                }
+
+                var node1 = endpoint1.getNode(world);
+                var node2 = endpoint2.getNode(world);
+
+                if (node1 == null || node2 == null) {
+                    continue;
+                }
+
+                if (makeTransmissionLine(part)) {
+                    iterator.remove();
+                }
+            } catch (Exception e) {
+                PowerGrid.LOGGER.debug(
+                        "Failed to repair transmission line part {}, will retry",
+                        part,
+                        e
+                );
+            }
         }
     }
 }

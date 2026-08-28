@@ -135,12 +135,22 @@ public class TransmissionLinePart extends ElectricWire {
     }
 
     public void grab(BaseWireEntity forEntity, WorldNetworks.PartId id) {
-        if(persistentOwnerId.equals(id)) {
+        if (persistentOwnerId.equals(id)) {
             owner = forEntity;
-            if (line != null)
+
+            refreshEndpointNodes();
+
+            if (line != null) {
                 line.grabPart(forEntity, this);
+            } else {
+                global.queueTransmissionLineRepair(this);
+            }
         } else {
-            PowerGrid.LOGGER.warn("Entity tried to grab a part which it does not own, part: {}, entity: {}", this, forEntity);
+            PowerGrid.LOGGER.warn(
+                    "Entity tried to grab a part which it does not own, part: {}, entity: {}",
+                    this,
+                    forEntity
+            );
         }
     }
 
@@ -209,10 +219,17 @@ public class TransmissionLinePart extends ElectricWire {
             global.addAndMigrateNode(getNode1().endpoint, node1);
             setNode1(node1);
         }
+
         var node2 = getEndpoint2().getNode(global.world);
         if(this.node2 != node2 && node2 != null) {
             global.addAndMigrateNode(getNode2().endpoint, node2);
             setNode2(node2);
         }
+
+        if (line == null) {
+            global.queueTransmissionLineRepair(this);
+        }
     }
+
+
 }
