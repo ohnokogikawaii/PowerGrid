@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=south": {
+      "model": "powergrid:block/general_power_conditioner"
+    },
+    "facing=west": {
+      "model": "powergrid:block/general_power_conditioner",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "powergrid:block/general_power_conditioner",
+      "y": 180
+    },
+    "facing=east": {
+      "model": "powergrid:block/general_power_conditioner",
+      "y": 270
+    }
+  }
+}

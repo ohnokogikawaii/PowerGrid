@@ -33,11 +33,13 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.NotNull;
 import org.patryk3211.powergrid.collections.ModdedConfigs;
 import org.patryk3211.powergrid.electricity.gauge.GaugeValueBehaviour;
@@ -87,11 +89,36 @@ public class PlotterBlockEntity extends ElectricKineticBlockEntity {
     }
 
     @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
+    }
+
+    @Override
     public void buildCircuit(CircuitBuilder builder) {
         // 20 kilo-ohm "impedance".
         builder.setTerminalCount(2);
         wire = new SamplingWire(20e3f, builder.terminalNode(0), builder.terminalNode(1));
         builder.add(wire);
+    }
+
+    @Override
+    public float resistance() {
+        return super.resistance();
+    }
+
+    @Override
+    public float resistance(String suffix) {
+        return super.resistance(suffix);
+    }
+
+    @Override
+    public void paused() {
+        super.paused();
+    }
+
+    @Override
+    public void unpaused() {
+        super.unpaused();
     }
 
     public float getAnimationSpeed() {
@@ -248,8 +275,18 @@ public class PlotterBlockEntity extends ElectricKineticBlockEntity {
     }
 
     @Override
+    public boolean containedFluidTooltip(List<Component> tooltip, boolean isPlayerSneaking, IFluidHandler handler) {
+        return super.containedFluidTooltip(tooltip, isPlayerSneaking, handler);
+    }
+
+    @Override
     public boolean isSpeedRequirementFulfilled() {
         return Math.abs(getSpeed()) >= 16;
+    }
+
+    @Override
+    public ItemStack getIcon(boolean isPlayerSneaking) {
+        return super.getIcon(isPlayerSneaking);
     }
 
     public static class BoxTransform extends CenteredSideValueBoxTransform {

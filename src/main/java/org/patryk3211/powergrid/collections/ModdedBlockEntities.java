@@ -17,6 +17,7 @@ package org.patryk3211.powergrid.collections;
 
 import com.simibubi.create.content.kinetics.base.ShaftVisual;
 import com.tterrag.registrate.util.entry.BlockEntityEntry;
+import com.tterrag.registrate.util.entry.BlockEntry;
 import org.patryk3211.powergrid.circuits.circuitboard.CircuitBoardBlockEntity;
 import org.patryk3211.powergrid.circuits.circuitboard.CircuitBoardRenderer;
 import org.patryk3211.powergrid.circuits.editor.CircuitDesignTableBlockEntity;
@@ -24,6 +25,8 @@ import org.patryk3211.powergrid.circuits.editor.CircuitDesignTableRenderer;
 import org.patryk3211.powergrid.electricity.basinheater.BasinHeaterBlockEntity;
 import org.patryk3211.powergrid.electricity.battery.MultiBlockBatteryEntity;
 import org.patryk3211.powergrid.electricity.battery.PotatoBatteryBlockEntity;
+import org.patryk3211.powergrid.electricity.battery.lifepo4.LiFePO4BatteryBlock;
+import org.patryk3211.powergrid.electricity.battery.lifepo4.LiFePO4BatteryBlockEntity;
 import org.patryk3211.powergrid.electricity.bell.AlarmBellBlockEntity;
 import org.patryk3211.powergrid.electricity.carbonpile.CarbonPileBlockEntity;
 import org.patryk3211.powergrid.electricity.carbonpile.CarbonPileCoilBlockEntity;
@@ -53,6 +56,7 @@ import org.patryk3211.powergrid.electricity.pump.ElectricPumpBlockEntity;
 import org.patryk3211.powergrid.electricity.redstoneconverter.RedstoneConverterBlockEntity;
 import org.patryk3211.powergrid.electricity.resistor.ResistorBlockEntity;
 import org.patryk3211.powergrid.electricity.socket.SocketBlockEntity;
+import org.patryk3211.powergrid.electricity.solar.SolarBlockEntity;
 import org.patryk3211.powergrid.electricity.solarpanel.SolarPanelBearingBlockEntity;
 import org.patryk3211.powergrid.electricity.solarpanel.SolarPanelBearingRenderer;
 import org.patryk3211.powergrid.electricity.solarpanel.SolarPanelBearingVisual;
@@ -98,6 +102,15 @@ import org.patryk3211.powergrid.utility.proxy.SubstituteBlockEntityProvider;
 import static org.patryk3211.powergrid.PowerGrid.REGISTRATE;
 
 public class ModdedBlockEntities {
+    public static final BlockEntityEntry<LiFePO4BatteryBlockEntity> LIFEPO4 =
+            REGISTRATE.blockEntity("lifepo4", LiFePO4BatteryBlockEntity::new)
+                    .validBlock(ModdedBlocks.LIFEPO4)
+                    .register();
+
+    public static final BlockEntityEntry<SolarBlockEntity> SOLAR =
+            REGISTRATE.blockEntity("solar", SolarBlockEntity::new)
+                    .validBlock(ModdedBlocks.SOLAR)
+                    .register();
     public static final BlockEntityEntry<ConnectorBlockEntity> WIRE_CONNECTOR =
             REGISTRATE.blockEntity("wire_connector", ConnectorBlockEntity::new)
                     .validBlocks(ModdedBlocks.WIRE_CONNECTOR, ModdedBlocks.HEAVY_WIRE_CONNECTOR)

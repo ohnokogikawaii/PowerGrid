@@ -20,6 +20,7 @@ import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -137,5 +138,11 @@ public abstract class ElectricBlockEntity extends SmartBlockEntity implements IE
         var behaviour = getBehaviour(PGAdvancementBehaviour.TYPE);
         if(behaviour != null)
             behaviour.awardPlayerIfNear(advancement, range);
+    }
+
+    protected void read(CompoundTag tag, boolean clientPacket) {
+    }
+
+    protected void write(CompoundTag tag, boolean clientPacket) {
     }
 }

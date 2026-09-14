@@ -117,4 +117,8 @@ public abstract class ElectricBlock extends Block implements IElectric {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         return use(state, level, pos, player, InteractionHand.MAIN_HAND, hitResult);
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
+    }
 }

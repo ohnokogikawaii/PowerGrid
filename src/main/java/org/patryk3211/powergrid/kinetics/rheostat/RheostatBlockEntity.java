@@ -23,6 +23,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -122,4 +123,7 @@ public class RheostatBlockEntity extends TunedBlockEntity implements IHaveGoggle
             return VecHelper.voxelSpace(8.0f, 6.0f, 13.5f);
         }
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;}
 }

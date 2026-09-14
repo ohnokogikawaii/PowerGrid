@@ -19,6 +19,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -508,4 +509,7 @@ public class SolarPanelBearingBlockEntity extends ElectricKineticBlockEntity imp
     protected boolean syncSequenceContext() {
         return true;
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;}
 }

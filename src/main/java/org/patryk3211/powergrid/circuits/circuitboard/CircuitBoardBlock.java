@@ -408,4 +408,8 @@ public class CircuitBoardBlock extends ElectricBlock implements IBE<CircuitBoard
     public BlockState mirror(BlockState state, Mirror mirrorIn) {
         return state.rotate(mirrorIn.getRotation(state.getValue(HORIZONTAL_FACING)));
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
+    }
 }

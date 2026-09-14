@@ -1,0 +1,14 @@
+{
+  "colorable": false,
+  "cord": false,
+  "horizontalCoefficient": 1.01,
+  "insulated": false,
+  "itemsPerMeter": 0.5,
+  "maximumCurrent": 1280.0,
+  "maximumLength": 24.0,
+  "resistancePerItem": 3.75E-4,
+  "texture": "powergrid:textures/special/octa_wire.png",
+  "thermalMass": 1.0,
+  "verticalCoefficient": 1.2,
+  "wireThickness": 0.18
+}

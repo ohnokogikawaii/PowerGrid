@@ -18,6 +18,7 @@ package org.patryk3211.powergrid.electricity.transformer;
 import com.simibubi.create.foundation.block.IBE;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -130,5 +131,10 @@ public class TransformerSmallBlock extends TransformerBlock implements IBE<Trans
     @Override
     public BlockEntityType<? extends TransformerSmallBlockEntity> getBlockEntityType() {
         return ModdedBlockEntities.TRANSFORMER_SMALL.get();
+    }
+
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
     }
 }

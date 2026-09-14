@@ -1,0 +1,9 @@
+// 1.21.1	2026-09-03T22:57:13.4133137	powergrid's processing recipes: deploying
+df2305e818bab16d5b99f2bf5afef9c7d75fb962 data/powergrid/recipe/deploying/ceiling_tile.json
+89b5f198688c0c55a86798898792deefefb74f83 data/powergrid/recipe/deploying/copper_plating.json
+00c5b2a92396524b49c9cc92bb588cdd1ef7a5c9 data/powergrid/recipe/deploying/electrobaton_boosting.json
+a0cf40de876280218078f637ee9ca02de5042a61 data/powergrid/recipe/deploying/electrozapper_boosting.json
+b1458742afbfe36b7b7426eb4579fdc97d676032 data/powergrid/recipe/deploying/portable_drill_boosting.json
+99752db1615c05d1968e1794404fb0590e4ce5fd data/powergrid/recipe/deploying/portable_saw_boosting.json
+1a230740bad47620d7765c0e1a11350aa797fb40 data/powergrid/recipe/deploying/schematic_copy.json
+d97c5ee004b8e428c3c8cfa4a35fbd6d6d65fa64 data/powergrid/recipe/deploying/string_light_cord.json

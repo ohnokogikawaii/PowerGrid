@@ -1,5 +1,8 @@
 {
   "values": [
-    "powergrid:wire"
+    "powergrid:wire",
+    "powergrid:double_wire",
+    "powergrid:quad_wire",
+    "powergrid:octa_wire"
   ]
 }

@@ -168,4 +168,7 @@ public class PunchCardReaderBlockEntity extends ElectricKineticBlockEntity {
     public void dropItems() {
 
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;}
 }

@@ -192,5 +192,7 @@ public class SolarPanelBlock extends DirectionalElectricBlock implements IBE<Sol
             }
         }
     }
-
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;}
 }

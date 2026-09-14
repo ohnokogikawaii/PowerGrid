@@ -131,4 +131,5 @@ public class ContactorBlock extends HorizontalAxisElectricBlock implements IBE<C
             default -> null;
         };
     }
+
 }

@@ -136,4 +136,5 @@ public class HvBreakerBlock extends HorizontalKineticBlock implements IElectric,
         Resistance.series(ResistanceValues.get(this), player, tooltip);
         Current.max(stack, player, tooltip);
     }
+
 }

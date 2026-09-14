@@ -2,6 +2,10 @@
   "values": [
     "powergrid:wire",
     "powergrid:golden_wire",
-    "powergrid:insulated_copper_wire"
+    "powergrid:insulated_copper_wire",
+    "powergrid:debug_wire",
+    "powergrid:double_wire",
+    "powergrid:quad_wire",
+    "powergrid:octa_wire"
   ]
 }

@@ -230,4 +230,8 @@ public abstract class TransformerBlock extends ElectricBlock {
     public int getMaxTurns() {
         return maxTurns;
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
+    }
 }

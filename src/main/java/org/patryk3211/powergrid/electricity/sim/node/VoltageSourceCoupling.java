@@ -29,6 +29,7 @@ public class VoltageSourceCoupling extends CouplingNode implements IStaticResidu
     protected final IElectricNode negative;
     private double voltage;
     private float resistance;
+    private boolean mpptSource;
 
     public VoltageSourceCoupling(IElectricNode positive, @Nullable IElectricNode negative, float resistance) {
         this.positive = positive;
@@ -46,6 +47,82 @@ public class VoltageSourceCoupling extends CouplingNode implements IStaticResidu
         this(positive, negative, resistance);
         setVoltage(voltage);
     }
+    private static final float BLOCKED_RESISTANCE = 1_000_000f;
+
+    private boolean chargeBlocked;
+    private boolean dischargeBlocked;
+    public void setCurrentDirectionBlocked(
+            boolean chargeBlocked,
+            boolean dischargeBlocked
+    ) {
+        this.chargeBlocked = chargeBlocked;
+        this.dischargeBlocked = dischargeBlocked;
+
+        updateNetworkResistance();
+    }
+
+    private void updateNetworkResistance() {
+
+        if (network == null)
+            return;
+
+        /*
+         * 重要：
+         *
+         * 現在の抵抗と有効抵抗の差だけ変更する。
+         */
+        float effectiveResistance =
+                getEffectiveResistance();
+
+        float delta =
+                effectiveResistance - resistance;
+
+        if (Math.abs(delta) < 0.000001f)
+            return;
+
+        network.alterConductanceMatrix(
+                index,
+                index,
+                -delta
+        );
+    }
+    private float getEffectiveResistance() {
+
+        double positiveVoltage =
+                positive.getVoltage();
+
+        double negativeVoltage =
+                negative != null
+                        ? negative.getVoltage()
+                        : 0.0;
+
+        double externalVoltage =
+                positiveVoltage - negativeVoltage;
+
+        /*
+         * 充電方向
+         */
+        if (
+                chargeBlocked
+                        && externalVoltage > voltage
+        ) {
+            return BLOCKED_RESISTANCE;
+        }
+
+        /*
+         * 放電方向
+         */
+        if (
+                dischargeBlocked
+                        && externalVoltage < voltage
+        ) {
+            return BLOCKED_RESISTANCE;
+        }
+
+        return resistance;
+    }
+
+
 
     @Override
     public boolean isSource() {
@@ -118,5 +195,12 @@ public class VoltageSourceCoupling extends CouplingNode implements IStaticResidu
         if(negative != null)
             return String.format("VoltageSource(%s %s V=%g)", positive, negative, voltage);
         return String.format("VoltageSource(%s V=%g)", positive, voltage);
+    }
+
+    public void setMpptSource(
+            boolean mpptSource
+    ) {
+        this.mpptSource =
+                mpptSource;
     }
 }

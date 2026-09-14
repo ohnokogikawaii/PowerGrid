@@ -28,6 +28,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -310,4 +311,8 @@ public class HvSwitchBlockEntity extends ElectricKineticBlockEntity implements S
             wire = null;
         }
     }
+
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;}
 }

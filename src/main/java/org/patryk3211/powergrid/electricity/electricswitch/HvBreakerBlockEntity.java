@@ -29,6 +29,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -223,4 +224,7 @@ public class HvBreakerBlockEntity extends ElectricKineticBlockEntity {
             return VecHelper.voxelSpace(8.0f, 7.0f, 15.5f);
         }
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;}
 }

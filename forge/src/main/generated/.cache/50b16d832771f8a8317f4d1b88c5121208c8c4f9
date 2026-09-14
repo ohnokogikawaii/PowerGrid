@@ -1,0 +1,12 @@
+// 1.21.1	2026-09-03T22:57:13.4047269	Tags for minecraft:block mod id vanilla
+4b173f9ab8a38e8c77ea3b5a6f17db60609f8097 data/powergrid/tags/block/affected_by_lamp.json
+150da1135a6d5d7b9cb1ec65250c0aceaa835dff data/powergrid/tags/block/carbon_pile_block.json
+08243309fd5d19870505b2047bc09efe23ee6109 data/powergrid/tags/block/conductive_ground.json
+35133e95f1c8fdd7a1c21afcc231fc0bffefb9a8 data/powergrid/tags/block/solar_full_light.json
+f8a9764d989e90115f6393188e5c8f9656b3d977 data/powergrid/tags/block/solar_half_light.json
+e5c060984856bc2fbf6da1c76b4b3aa639810c26 data/powergrid/tags/block/solar_quarter_light.json
+8c7a8f85bdb439871076387bc916ab934218ea91 data/powergrid/tags/block/solar_three_quarters_light.json
+3e751f0a5d8df48c983b43d7874280e4ee6f440d data/sable/tags/block/half_volume.json
+087bdcd8848e3d829bd95c2e77006fe48b283849 data/sable/tags/block/heavy.json
+33242ddf4306177f3cec5eb3504edafcc79cf645 data/sable/tags/block/light.json
+4a4fdc11cec74f7db87e0100030dcab389bf54ed data/sable/tags/block/quarter_volume.json

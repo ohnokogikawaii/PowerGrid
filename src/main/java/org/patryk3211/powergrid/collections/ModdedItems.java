@@ -87,6 +87,87 @@ public class ModdedItems {
                     true, false, true))
             .tag(ModdedTags.Item.WIRES.tag, ModdedTags.Item.LIGHT_WIRES.tag)
             .register();
+    public static final ItemEntry<WireItem> DEBUG_WIRE = REGISTRATE.item("debug_wire", WireItem::new)
+            .transform(WireItem.properties(
+                    0.000001f,
+                    64,
+                    0.5f,
+                    1.0f,
+                    1000000000,
+                    PowerGrid.texture("special/debug_wire"),
+                    1.01f,
+                    1.2f,
+                    0.0625f,
+                    false,
+                    false,
+                 false))
+            .tag(ModdedTags.Item.WIRES.tag, ModdedTags.Item.LIGHT_WIRES.tag)
+            .lang("Debug Wire")
+            .register();
+    public static final ItemEntry<WireItem> DOUBLE_WIRE = REGISTRATE.item("double_wire", WireItem::new)
+            .transform(WireItem.properties(
+                    0.0015f,
+                    24,
+                    0.5f,
+                    1.0f,
+                    320,
+                    PowerGrid.texture("special/double_wire"),
+                    1.01f,
+                    1.2f,
+                    0.085f,
+                    false,
+                    false,
+                    false))
+            .tag(
+                    ModdedTags.Item.WIRES.tag,
+                    ModdedTags.Item.LIGHT_WIRES.tag,
+                    wires("copper")
+            )
+            .lang("Double Copper Wire")
+            .register();
+    public static final ItemEntry<WireItem> QUAD_WIRE = REGISTRATE.item("quad_wire", WireItem::new)
+            .transform(WireItem.properties(
+                    0.00075f,
+                    24,
+                    0.5f,
+                    1.0f,
+                    640,
+                    PowerGrid.texture("special/quad_wire"),
+                    1.01f,
+                    1.2f,
+                    0.125f,
+                    false,
+                    false,
+                    false))
+            .tag(
+                    ModdedTags.Item.WIRES.tag,
+                    ModdedTags.Item.LIGHT_WIRES.tag,
+                    wires("copper")
+            )
+            .lang("Quad Copper Wire")
+            .register();
+    public static final ItemEntry<WireItem> OCTA_WIRE = REGISTRATE.item("octa_wire", WireItem::new)
+            .transform(WireItem.properties(
+                    0.000375f,
+                    24,
+                    0.5f,
+                    1.0f,
+                    1280,
+                    PowerGrid.texture("special/octa_wire"),
+                    1.01f,
+                    1.2f,
+                    0.18f,
+                    false,
+                    false,
+                    false))
+            .tag(
+                    ModdedTags.Item.WIRES.tag,
+                    ModdedTags.Item.LIGHT_WIRES.tag,
+                    wires("copper")
+            )
+            .lang("Octa Copper Wire")
+            .register();
+
     public static final ItemEntry<CordItem> CORD = REGISTRATE.item("copper_cord", CordItem::new)
             .transform(WireItem.properties(0.0015f, 16, 0.5f, 2.0f, 60,
                     PowerGrid.texture("special/insulated_wire"), 1.005f, 1.005f, 2/16f,

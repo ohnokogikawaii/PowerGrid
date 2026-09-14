@@ -45,4 +45,8 @@ public class ResistorBlock extends AbstractResistorBlock implements IBE<Resistor
     public void appendProperties(ItemStack stack, Player player, List<Component> tooltip) {
         Power.max(stack, player, tooltip);
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
+    }
 }

@@ -237,4 +237,8 @@ public class DeviceConnectorBlock extends Rotation4ElectricBlock implements IBE<
                 .add(Lang.translateDirect("tooltip.device_connector.fe_v"));
         valueText.style(ChatFormatting.DARK_AQUA).addTo(tooltip);
     }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
+    }
 }

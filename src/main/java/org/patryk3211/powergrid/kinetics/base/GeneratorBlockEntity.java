@@ -16,6 +16,7 @@
 package org.patryk3211.powergrid.kinetics.base;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -52,5 +53,9 @@ public abstract class GeneratorBlockEntity extends ElectricKineticBlockEntity {
 
         speed += torque / armatureInertia * TIME_STEP;
         updateVoltage(emfVoltage());
+    }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
     }
 }

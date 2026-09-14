@@ -64,6 +64,7 @@ import org.patryk3211.powergrid.config.CThermal;
 import org.patryk3211.powergrid.electricity.basinheater.BasinHeaterBlock;
 import org.patryk3211.powergrid.electricity.basinheater.BasinHeaterBlockEntity;
 import org.patryk3211.powergrid.electricity.battery.*;
+import org.patryk3211.powergrid.electricity.battery.lifepo4.LiFePO4BatteryBlock;
 import org.patryk3211.powergrid.electricity.bell.AlarmBellBlock;
 import org.patryk3211.powergrid.electricity.carbonpile.CarbonPileBlock;
 import org.patryk3211.powergrid.electricity.carbonpile.CarbonPileCoilBlock;
@@ -93,6 +94,7 @@ import org.patryk3211.powergrid.electricity.pump.ElectricPumpBlock;
 import org.patryk3211.powergrid.electricity.redstoneconverter.RedstoneConverterBlock;
 import org.patryk3211.powergrid.electricity.resistor.ResistorBlock;
 import org.patryk3211.powergrid.electricity.socket.SocketBlock;
+import org.patryk3211.powergrid.electricity.solar.SolarBlock;
 import org.patryk3211.powergrid.electricity.solarpanel.SolarPanelBearingBlock;
 import org.patryk3211.powergrid.electricity.solarpanel.SolarPanelBlock;
 import org.patryk3211.powergrid.electricity.solarpanel.SolarPanelCTBehaviour;
@@ -970,6 +972,16 @@ public class ModdedBlocks {
                 .build()
             .register();
 
+    public static BlockEntry<SolarBlock> SOLAR = REGISTRATE.block("solar", SolarBlock::new)
+            .initialProperties(SharedProperties::softMetal)
+            .transform(pickaxeOnly())
+            .defaultLoot()
+            .blockstate(alternateDirectionalBlock("block/solar"))
+            .item()
+            .model(itemWithParent("block/solar"))
+            .build()
+            .register();
+
     public static BlockEntry<SolarPanelBlock> SOLAR_PANEL = REGISTRATE.block("solar_panel", SolarPanelBlock::new)
             .initialProperties(SharedProperties::softMetal)
             .blockstate(alternateDirectionalBlock("block/solar_panel/inline_solar_panel"))
@@ -1013,6 +1025,16 @@ public class ModdedBlocks {
 
     public static BlockEntry<StringLightBlock> STRING_LIGHT_BLOCK = REGISTRATE.block("string_light_block", StringLightBlock::new)
             .blockstate(air())
+            .register();
+
+    public static BlockEntry<LiFePO4BatteryBlock> LIFEPO4 = REGISTRATE.block("lifepo4",LiFePO4BatteryBlock::new)
+            .blockstate(horizontalBlock("block/lifepo4"))
+            .initialProperties(SharedProperties::softMetal)
+            .transform(pickaxeOnly())
+            .defaultLoot()
+            .item()
+            .model(itemWithParent("block/lifepo4"))
+            .build()
             .register();
 
     public static void register() {

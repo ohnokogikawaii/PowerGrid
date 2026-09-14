@@ -1,0 +1,102 @@
+
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "tag": "c:plates/copper"
+  },
+  "loops": 1,
+  "results": [
+    {
+      "chance": 100.0,
+      "id": "powergrid:wire",
+      "count": 16
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:deploying",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_solar_panel"
+        },
+        {
+          "tag": "c:plates/copper"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_solar_panel"
+        }
+      ]
+    },
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_solar_panel"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_solar_panel"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_solar_panel"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_solar_panel"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_solar_panel"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_solar_panel"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_solar_panel"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_solar_panel"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_solar_panel"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_solar_panel"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "powergrid:incomplete_solar_panel"
+  }
+}
+

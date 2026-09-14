@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "powergrid:block/grid_speed_controller",
+      "y": 90
+    },
+    "axis=z": {
+      "model": "powergrid:block/grid_speed_controller"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+// 1.21.1	2026-09-03T22:57:13.4077546	powergrid's processing recipes: cutting
+44b501dbd181cf5bb9f4984dc7bdda0813f79487 data/powergrid/recipe/cutting/copper_wire_cutting.json
+2785b1d8ebc158f7bb8984f5c154111f34d7bb55 data/powergrid/recipe/cutting/empty_circuit_slabs.json
+b995e582b75bf12a3921eaf2bfbe8d2e40f67e63 data/powergrid/recipe/cutting/gold_wire_cutting.json
+5719ac5fc45b2d6bb9a8ac7c56ee9630de008c20 data/powergrid/recipe/cutting/iron_wire_cutting.json

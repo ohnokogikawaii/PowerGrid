@@ -17,6 +17,7 @@ package org.patryk3211.powergrid.electricity.electricswitch;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -44,5 +45,9 @@ public class LvSwitchBlock extends SurfaceSwitchBlock {
     @Override
     public void useSound(Level world, BlockPos pos, boolean open) {
         world.playSound(null, pos, ModdedSoundEvents.LV_SWITCH_CLICK.getMainEvent(), SoundSource.BLOCKS, 0.3F, open ? 0.65f : 0.75f);
+    }
+    @Override
+    public boolean accepts(ItemStack wireStack) {
+        return true;
     }
 }

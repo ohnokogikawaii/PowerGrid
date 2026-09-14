@@ -241,6 +241,7 @@ subprojects {
 	}
 
 	tasks.named("sourcesJar") {
+		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 		def commonSources = rootProject.sourcesJar
 		dependsOn commonSources
 		from commonSources.archiveFile.map { zipTree(it) }
