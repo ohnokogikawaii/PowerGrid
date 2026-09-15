@@ -8,7 +8,8 @@
     "BasinRecipeMixin",
     "EntityTrackerAccessor",
     "PlayerDrillMixin",
-    "ThreadedAnvilChunkStorageAccessor"
+    "ThreadedAnvilChunkStorageAccessor",
+    "HeatableBlockEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
