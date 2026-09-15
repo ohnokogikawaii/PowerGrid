@@ -1,7 +1,6 @@
 {
   "format_version": "1.9.0",
   "credit": "Made with Blockbench",
-  "parent": "block/block",
   "textures": {
     "0": "powergrid:block/component/pentode",
     "particle": "powergrid:block/component/pentode"
@@ -42,11 +41,6 @@
       "name": "body",
       "from": [0, 1.5, 0],
       "to": [3, 5.5, 3],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [0, 1.5, 0]
-      },
       "faces": {
         "north": {
           "uv": [3, 12, 6, 16],
@@ -78,11 +72,6 @@
       "name": "lower_ring",
       "from": [0.5, 1, 0.5],
       "to": [2.5, 2, 2.5],
-      "rotation": {
-        "angle": 0,
-        "axis": "y",
-        "origin": [-0.5, 1, -0.5]
-      },
       "faces": {
         "north": {
           "uv": [10, 7, 12, 8],
@@ -116,23 +105,23 @@
       "to": [2.75, 6, 2.75],
       "faces": {
         "north": {
-          "uv": [3, 16, 6, 16.5],
+          "uv": [3, 16, 6, 16],
           "texture": "#0"
         },
         "east": {
-          "uv": [0, 16, 3, 16.5],
+          "uv": [0, 16, 3, 16],
           "texture": "#0"
         },
         "south": {
-          "uv": [9, 16, 12, 16.5],
+          "uv": [9, 16, 12, 16],
           "texture": "#0"
         },
         "west": {
-          "uv": [6, 16, 9, 16.5],
+          "uv": [6, 16, 9, 16],
           "texture": "#0"
         },
         "up": {
-          "uv": [6, 19, 3, 16.5],
+          "uv": [6, 19, 3, 16],
           "texture": "#0"
         }
       }
