@@ -69,6 +69,9 @@ public class ModdedItems {
             .tag(ModdedTags.Item.WIRES.tag, ModdedTags.Item.LIGHT_WIRES.tag, wires("copper"))
             .lang("Copper Wire")
             .register();
+    public static final ItemEntry<Item> PENTODE = REGISTRATE.item("pentode", Item::new)
+            .lang("Pentode")
+            .register();
     public static final ItemEntry<WireItem> IRON_WIRE = REGISTRATE.item("iron_wire", WireItem::new)
             .transform(WireItem.properties(0.005f, 64, 0.5f, 2.0f, 160,
                     PowerGrid.texture("special/iron_wire"), 1.0075f, 1.125f, 2/16f,

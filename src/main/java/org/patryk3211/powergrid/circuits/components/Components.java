@@ -48,6 +48,18 @@ public class Components {
             .item(AllItems.ELECTRON_TUBE)
             .register();
 
+    public static final RegistryEntry<Component, PentodeComponent> PENTODE = REGISTRATE.component("pentode", PentodeComponent::new)
+            .footprint(3, 3, b -> b
+                    .addPadSharedText(0, 0, 2, "tube.anode", "tube.anode.short")
+                    .addPad(1, 0, 5, "Screen", "G2")
+                    .addPadSharedText(2, 0, 1, "tube.grid", "tube.grid.short")
+                    .addPadSharedText(1, 1, 0, "tube.cathode", "tube.cathode.short")
+                    .addPadSharedText(0, 2, 3, "tube.heater", "tube.heater.short")
+                    .addPadSharedText(2, 2, 4, "tube.heater", "tube.heater.short")
+                    .withItem().withOutline())
+            .item(ModdedItems.PENTODE)
+            .register();
+
     public static final RegistryEntry<Component, VFETComponent> VFET = REGISTRATE.component("vfet", VFETComponent::new)
             .footprint(3, 3, b -> b
                     .addPad(0, 0, 0, "Drain", "D")
