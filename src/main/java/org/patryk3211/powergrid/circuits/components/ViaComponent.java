@@ -15,16 +15,29 @@
  */
 package org.patryk3211.powergrid.circuits.components;
 
+import com.google.common.collect.ImmutableCollection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.patryk3211.powergrid.PowerGrid;
 import org.patryk3211.powergrid.circuits.circuitboard.ComponentCircuitBuilder;
+import org.patryk3211.powergrid.circuits.components.properties.BooleanProperty;
+import org.patryk3211.powergrid.circuits.components.properties.ComponentProperty;
 import org.patryk3211.powergrid.circuits.schematic.ComponentFootprint;
 import org.patryk3211.powergrid.circuits.schematic.PlacedComponent;
 import org.patryk3211.powergrid.circuits.thermal.ThermalBuilder;
 
 public class ViaComponent extends Component {
-    private static final ComponentFootprint NODED_FOOTPRINT = new ComponentFootprint.Builder(1, 1)
-            .addPad(0, 0, 0).build();
+
+    public static final BooleanProperty EDGE_CONNECTIONS =
+            new BooleanProperty(PowerGrid.MOD_ID, "edge_connections");
+
+    public static final BooleanProperty VERTICAL_PASSTHROUGH =
+            new BooleanProperty(PowerGrid.MOD_ID, "vertical_passthrough");
+
+    private static final ComponentFootprint NODED_FOOTPRINT =
+            new ComponentFootprint.Builder(1, 1)
+                    .addPad(0, 0, 0)
+                    .build();
 
     public ViaComponent(ComponentFootprint footprint) {
         super(footprint);
@@ -32,15 +45,32 @@ public class ViaComponent extends Component {
 
     @Override
     public ComponentFootprint footprint(@Nullable PlacedComponent placed) {
-        if(placed != null) {
-            if(placed.x == 0 || placed.y == 0 || placed.x == 15 || placed.y == 15)
+        if (placed != null) {
+            if ((placed.x == 0 || placed.y == 0 ||
+                    placed.x == 15 || placed.y == 15)
+                    && placed.get(EDGE_CONNECTIONS)) {
                 return NODED_FOOTPRINT;
+            }
+
+            if (placed.get(VERTICAL_PASSTHROUGH)) {
+                return NODED_FOOTPRINT;
+            }
         }
+
         return super.footprint(placed);
     }
 
     @Override
-    public void bake(@NotNull PlacedComponent placed, @NotNull ComponentCircuitBuilder builder, ThermalBuilder.@NotNull IEmitter thermals) {
+    protected void addProperties(
+            ImmutableCollection.Builder<ComponentProperty<?>> properties) {
+        super.addProperties(properties);
+        properties.add(EDGE_CONNECTIONS, VERTICAL_PASSTHROUGH);
+    }
 
+    @Override
+    public void bake(
+            @NotNull PlacedComponent placed,
+            @NotNull ComponentCircuitBuilder builder,
+            ThermalBuilder.@NotNull IEmitter thermals) {
     }
 }
