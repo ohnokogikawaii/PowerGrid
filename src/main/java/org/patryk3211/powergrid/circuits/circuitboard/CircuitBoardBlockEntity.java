@@ -1,5 +1,4 @@
 /*
-test
  * Copyright 2025 patryk3211
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
