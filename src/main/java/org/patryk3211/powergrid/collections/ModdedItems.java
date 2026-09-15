@@ -71,6 +71,7 @@ public class ModdedItems {
             .register();
     public static final ItemEntry<Item> PENTODE = REGISTRATE.item("pentode", Item::new)
             .lang("Pentode")
+            .model(itemWithParent("component/pentode"))
             .register();
     public static final ItemEntry<WireItem> IRON_WIRE = REGISTRATE.item("iron_wire", WireItem::new)
             .transform(WireItem.properties(0.005f, 64, 0.5f, 2.0f, 160,

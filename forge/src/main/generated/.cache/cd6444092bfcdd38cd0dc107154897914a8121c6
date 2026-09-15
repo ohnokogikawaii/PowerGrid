@@ -1,4 +1,4 @@
-// 1.21.1	2026-09-03T22:57:13.4077546	Registrate Provider for powergrid [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider, Component Item Mapping, Wire Item Mapping]
+// 1.21.1	2026-09-15T21:43:34.2256885	Registrate Provider for powergrid [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider, Tags (engine_type), Component Item Mapping, Wire Item Mapping]
 0351f64b4d3a52e893c19095ef365c6d91d51984 assets/powergrid/blockstates/acid.json
 3fccc8d4079e1736fe4b5d6533d32f1dfd7645cd assets/powergrid/blockstates/alarm_bell.json
 65f5028e579c949127e5ff40119c7518278d9145 assets/powergrid/blockstates/andesite_encased_crt.json
@@ -78,8 +78,8 @@ b99ce728e6e41cddc4f398f88fccf8b3952cf1ac assets/powergrid/blockstates/vertical_g
 e05070d6a54e71632547bb5709baff1a3978ed06 assets/powergrid/blockstates/voltage_gauge.json
 bd550c6b309ac5fa085a32f29c65a093fa6adede assets/powergrid/blockstates/winding.json
 ed23210ca824e2ddcb797afb070cfde07a354301 assets/powergrid/blockstates/wire_connector.json
-06912988a3bd11633407e455d3495d97aa9688e2 assets/powergrid/lang/en_ud.json
-516dd236e6e6af9ec46ebdcd725244d6ff758a88 assets/powergrid/lang/en_us.json
+6bb628d1d69a885b58df25e5a5a0f5673b14dcce assets/powergrid/lang/en_ud.json
+c897c65ea4ec74eea68e584debc6261bbd0d1483 assets/powergrid/lang/en_us.json
 dfaa19092446e8659e975df23bdcee24a51bda30 assets/powergrid/models/block/acid.json
 40e4b5bda65415f4d49c211c71a44df8606da6d1 assets/powergrid/models/block/battery.json
 cebbe270dd06237ec3199068093236261e15247b assets/powergrid/models/block/conductive_casing.json
@@ -172,6 +172,7 @@ e66cf252ed640398a41c5b176b8abcced51b0465 assets/powergrid/models/item/lv_light_b
 ea54bfc8b42339f295e0eeb81cf87f756e54dd2a assets/powergrid/models/item/mv_switch.json
 4ffad619d070cd820512b37c8a3035c0d18c17ca assets/powergrid/models/item/neon_bulb.json
 d95692472e6bd3bbcfec0ac1c2740c7e4a69b36c assets/powergrid/models/item/octa_wire.json
+31eaccc27b838f320379005fe885f5a5fc6a0018 assets/powergrid/models/item/pentode.json
 5e38e09a5f7eebc93f0077e5a7b99fcc1484c6e9 assets/powergrid/models/item/pins.json
 b2da73af10a8705c67e991aa573fe3a91da1c19a assets/powergrid/models/item/plotter.json
 e9701dbde7ba8bd3f8f10b0b258904e1628f2ae4 assets/powergrid/models/item/portable_battery.json
@@ -317,6 +318,7 @@ c3db81ca6b75a8075f208d0bdb665b3087b8c80e data/powergrid/powergrid/component_item
 6a2e6e24e8a17c171b03e6901907f8738eff8536 data/powergrid/powergrid/component_items/label.json
 62b459e3d80df11c27044b87d001a5092cbef3b9 data/powergrid/powergrid/component_items/light_bulb.json
 562863432c647098997bea8ca1d224b7c4c14e22 data/powergrid/powergrid/component_items/neon_bulb.json
+3da3f4af643546d9bfbb2419ab4b51e17de7ef15 data/powergrid/powergrid/component_items/pentode.json
 e25547d35114e20f4dd30cdc84cc6e58d5ab58e3 data/powergrid/powergrid/component_items/potentiometer.json
 917a1ec6a1895990d9ee6810e5711503cacd11ef data/powergrid/powergrid/component_items/redstone_relay.json
 14590b7130b4a0767ff37e06072c3cdac6ffb072 data/powergrid/powergrid/component_items/regulator_tube.json
@@ -342,7 +344,7 @@ ace7c8168ac01038cc928ac2c4c89a84cb939df9 data/powergrid/powergrid/wire_types/qua
 91d33352a52eae2987740026eeaaec5fbaaf2423 data/powergrid/recipe/copper_plating_stairs_from_copper_plating_stonecutting.json
 bbd279e70f370ad327958e0f1a93c638eb25c1a8 data/powergrid/tags/block/ignore_in_rotor_assembly_size.json
 fec9cb37d0be7656fff1945f12408ea917ca6a7c data/powergrid/tags/fluid/acid.json
-175108d9f149cf6490319bbc11dd47f8ab308a7e data/powergrid/tags/item/circuit_component.json
+8c8428b77778574345cd856b43b05fa29290925a data/powergrid/tags/item/circuit_component.json
 6609d602d76fc2384a1310c6ab47e25bf774271a data/powergrid/tags/item/circuit_schematic_holder.json
 b03365caf1dc88ed09375c7bc4ced6d6946f5106 data/powergrid/tags/item/fuse_resetting.json
 abb462863c0db0c25935af7811c9f4ed43e7e114 data/powergrid/tags/item/light_wires.json

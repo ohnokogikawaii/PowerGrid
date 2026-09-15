@@ -1,11 +1,11 @@
 {
   "variants": {
-    "facing=north": {
-      "model": "powergrid:block/lifepo4"
-    },
     "facing=east": {
       "model": "powergrid:block/lifepo4",
       "y": 90
+    },
+    "facing=north": {
+      "model": "powergrid:block/lifepo4"
     },
     "facing=south": {
       "model": "powergrid:block/lifepo4",

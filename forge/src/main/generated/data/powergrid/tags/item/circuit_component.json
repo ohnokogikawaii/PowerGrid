@@ -1,6 +1,7 @@
 {
   "values": [
     "powergrid:potentiometer",
+    "powergrid:pentode",
     "powergrid:current_gauge",
     "powergrid:barretter_tube",
     "powergrid:copper_coil",
