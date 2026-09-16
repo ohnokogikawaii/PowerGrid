@@ -2,7 +2,7 @@
   "type": "create:haunting",
   "ingredients": [
     {
-      "tag": "minecraft:slime_ball"
+      "tag": "c:slime_balls"
     }
   ],
   "results": [
