@@ -151,13 +151,17 @@ public final class MotorParameters {
     }
 
     /**
-     * Rated current estimated from rated electrical power.
+     * Rated current estimated from rated torque.
+     *
+     * For a DC motor:
+     *
+     *     T = Kt * I
      */
     public double ratedCurrent() {
-        if (ratedVoltage <= 0)
+        if (torqueConstant <= 0)
             return 0;
 
-        return ratedPower / ratedVoltage;
+        return ratedTorque / torqueConstant;
     }
 
     /**
@@ -177,8 +181,22 @@ public final class MotorParameters {
     /**
      * Small motor.
      *
-     * Approximate rated operating point:
-     * 256 V, 5 kW, 200 N*m, 240 RPM.
+     * Rated operating point:
+     *
+     *     256 V
+     *     5 kW
+     *     200 N*m
+     *     240 RPM
+     *
+     * Rated current:
+     *
+     *     200 / 10 = 20 A
+     *
+     * At rated speed:
+     *
+     *     E = Ke * omega
+     *
+     * giving approximately 251.3 V back-EMF.
      */
     public static MotorParameters small() {
         return new MotorParameters(
@@ -188,8 +206,8 @@ public final class MotorParameters {
                 200.0,
                 240.0,
                 256.0,
-                0.80,
-                0.15,
+                0.2335,
+                0.05,
                 10.0,
                 30.0,
                 10.0,
@@ -200,8 +218,18 @@ public final class MotorParameters {
     /**
      * Medium motor.
      *
-     * Approximate rated operating point:
-     * 512 V, 10 kW, 250 N*m, 380 RPM.
+     * Rated operating point:
+     *
+     *     512 V
+     *     10 kW
+     *     250 N*m
+     *     380 RPM
+     *
+     * Rated current:
+     *
+     *     250 / 12.5 = 20 A
+     *
+     * At rated speed the back-EMF is approximately 497.4 V.
      */
     public static MotorParameters medium() {
         return new MotorParameters(
@@ -211,8 +239,8 @@ public final class MotorParameters {
                 250.0,
                 380.0,
                 512.0,
-                1.60,
-                0.30,
+                0.729,
+                0.10,
                 12.5,
                 30.0,
                 30.0,
@@ -223,8 +251,18 @@ public final class MotorParameters {
     /**
      * Large motor.
      *
-     * Approximate rated operating point:
-     * 1024 V, 18 kW, 300 N*m, 570 RPM.
+     * Rated operating point:
+     *
+     *     1024 V
+     *     18 kW
+     *     300 N*m
+     *     570 RPM
+     *
+     * Rated current:
+     *
+     *     300 / 16.7 ~= 17.96 A
+     *
+     * At rated speed the back-EMF is approximately 995.1 V.
      */
     public static MotorParameters large() {
         return new MotorParameters(
@@ -234,8 +272,8 @@ public final class MotorParameters {
                 300.0,
                 570.0,
                 768.0,
-                3.20,
-                0.60,
+                1.61,
+                0.20,
                 16.7,
                 30.0,
                 80.0,
