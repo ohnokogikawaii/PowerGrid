@@ -13,46 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.patryk3211.powergrid.kinetics.motor;
 
 /**
  * Physics simulation for a simplified permanent-magnet DC motor.
  *
- * The model follows the basic motor relationship:
+ * Electrical equation:
  *
  *     V = R * I + L * dI/dt + Ke * omega
  *
- *     T = Kt * I
+ * Mechanical equation:
  *
- *     J * domega/dt = T - Tload - Tfriction
+ *     J * domega/dt = Tmotor - Tload - Tfriction
  *
- * Therefore startup behavior naturally produces:
+ * Motor torque:
  *
- *     high current
- *          ↓
- *     high torque
- *          ↓
- *     acceleration
- *          ↓
- *     increasing RPM
- *          ↓
- *     increasing back-EMF
- *          ↓
- *     decreasing current
+ *     Tmotor = Kt * I
  *
- * The class has no dependency on Minecraft or Create.
+ * For a permanent-magnet DC motor:
+ *
+ *     Ke == Kt
+ *
+ * when the constants are expressed in SI units.
+ *
+ * The simulation is deliberately independent from Minecraft and Create.
  */
 public final class MotorPhysics {
+
+    private static final double EPSILON = 1e-9;
+    private static final double ZERO_SPEED_EPSILON = 1e-6;
 
     private MotorPhysics() {
     }
 
     /**
-     * Updates the motor state by one simulation step.
+     * Advances the motor simulation by one step.
      *
-     * @param parameters motor's static parameters
+     * @param parameters motor parameters
      * @param state current motor state
-     * @param appliedVoltage voltage supplied to the motor
+     * @param appliedVoltage voltage applied to the motor
      * @param externalLoadTorque mechanical load torque
      * @param deltaTime simulation time in seconds
      */
@@ -63,169 +63,380 @@ public final class MotorPhysics {
             double externalLoadTorque,
             double deltaTime
     ) {
-        if (deltaTime <= 0)
+        if (parameters == null || state == null || deltaTime <= 0)
             return;
 
+        /*
+         * Prevent a very large timestep from destabilizing the simulation.
+         *
+         * The actual motor block can call this method every tick, but this
+         * also makes the class safe to use from other update rates.
+         */
         deltaTime = Math.min(deltaTime, 0.1);
 
         double voltage = finiteOrZero(appliedVoltage);
 
+        double resistance = Math.max(
+                finiteOrZero(parameters.resistance()),
+                EPSILON
+        );
+
+        double inductance = Math.max(
+                finiteOrZero(parameters.inductance()),
+                EPSILON
+        );
+
+        double inertia = Math.max(
+                finiteOrZero(parameters.inertia()),
+                EPSILON
+        );
+
+        double torqueConstant = finiteOrZero(
+                parameters.torqueConstant()
+        );
+
+        double maxCurrent = Math.max(
+                0,
+                finiteOrZero(parameters.maxCurrent())
+        );
+
         /*
-         * Electrical system
-         *
-         * E = Ke * omega
+         * -----------------------------------------------------------------
+         * Previous mechanical state
+         * -----------------------------------------------------------------
          */
-        double omega = state.angularVelocity();
+
+        double omega = finiteOrZero(state.angularVelocity());
+
+        /*
+         * -----------------------------------------------------------------
+         * Back EMF
+         *
+         *     E = Ke * omega
+         * -----------------------------------------------------------------
+         */
 
         double backEmf = parameters.backEmfConstant() * omega;
 
         /*
-         * RL motor winding:
+         * -----------------------------------------------------------------
+         * Electrical system
          *
-         * dI/dt = (V - E - R*I) / L
+         *     V = R*I + L*dI/dt + E
          *
-         * Euler integration is sufficient for the first implementation.
+         * Rearranged:
+         *
+         *     dI/dt = (V - E - R*I) / L
+         *
+         * Instead of a simple Euler integration, use the exact solution
+         * of the first-order RL equation while assuming omega is constant
+         * during this small timestep.
+         *
+         * This is considerably more stable during motor startup.
+         * -----------------------------------------------------------------
          */
-        double resistance = Math.max(parameters.resistance(), 1e-9);
-        double inductance = Math.max(parameters.inductance(), 1e-9);
 
-        double current = state.current();
+        double current = finiteOrZero(state.current());
 
-        double currentDerivative =
-                (voltage - backEmf - resistance * current) / inductance;
-
-        current += currentDerivative * deltaTime;
+        double targetCurrent =
+                (voltage - backEmf) / resistance;
 
         /*
-         * Prevent the simulation from exceeding the motor's
-         * electrical current capability.
+         * First-order RL response:
+         *
+         *     I(t) = Iinf + (I0 - Iinf)e^(-R/L*t)
          */
+
+        double electricalTimeConstant =
+                inductance / resistance;
+
+        double response;
+
+        if (electricalTimeConstant <= EPSILON) {
+            response = 0;
+        } else {
+            response = Math.exp(
+                    -deltaTime / electricalTimeConstant
+            );
+        }
+
+        current =
+                targetCurrent
+                        + (current - targetCurrent) * response;
+
         current = clamp(
                 current,
-                -parameters.maxCurrent(),
-                parameters.maxCurrent()
+                -maxCurrent,
+                maxCurrent
         );
 
         /*
-         * Electromagnetic torque.
+         * -----------------------------------------------------------------
+         * Electromagnetic torque
          *
-         * Positive current produces positive torque and negative
-         * current produces regenerative/braking torque.
+         *     T = Kt * I
+         * -----------------------------------------------------------------
          */
+
         double electromagneticTorque =
-                parameters.torqueConstant() * current;
+                torqueConstant * current;
 
         /*
-         * Mechanical load.
+         * -----------------------------------------------------------------
+         * External load
          *
-         * External load is supplied by the Create kinetic network.
-         * The load opposes the current direction of rotation.
+         * Create normally provides a positive magnitude for the mechanical
+         * load. The motor must apply that load opposite to its direction
+         * of rotation.
+         * -----------------------------------------------------------------
          */
-        double loadTorque = Math.max(0, Math.abs(finiteOrZero(externalLoadTorque)));
+
+        double loadMagnitude = Math.max(
+                0,
+                Math.abs(finiteOrZero(externalLoadTorque))
+        );
+
+        /*
+         * Determine the direction in which the rotor is trying to move.
+         *
+         * While stopped, use motor torque direction so that a motor can
+         * actually start from zero.
+         */
+
+        double direction;
+
+        if (Math.abs(omega) > ZERO_SPEED_EPSILON) {
+            direction = Math.signum(omega);
+        } else if (Math.abs(electromagneticTorque) > ZERO_SPEED_EPSILON) {
+            direction = Math.signum(electromagneticTorque);
+        } else {
+            direction = 0;
+        }
+
+        /*
+         * -----------------------------------------------------------------
+         * Friction
+         * -----------------------------------------------------------------
+         */
+
+        double frictionMagnitude = Math.max(
+                0,
+                finiteOrZero(parameters.frictionTorque())
+        );
 
         double frictionTorque = 0;
 
-        if (Math.abs(omega) > 1e-6) {
+        if (direction != 0) {
             frictionTorque =
-                    parameters.frictionTorque() * Math.signum(omega);
+                    frictionMagnitude * direction;
         }
 
         /*
-         * Static friction is represented when the rotor is almost
-         * stopped. This prevents a tiny load from causing endless
-         * numerical oscillation around zero RPM.
+         * -----------------------------------------------------------------
+         * Static friction / startup
+         *
+         * If the rotor is stopped and motor torque cannot overcome the
+         * external load plus friction, keep the rotor stationary.
+         * -----------------------------------------------------------------
          */
-        if (Math.abs(omega) <= 1e-6 && Math.abs(electromagneticTorque) <= loadTorque) {
-            omega = 0;
+
+        if (Math.abs(omega) <= ZERO_SPEED_EPSILON) {
+
+            double resistingTorque =
+                    loadMagnitude + frictionMagnitude;
+
+            if (Math.abs(electromagneticTorque) <= resistingTorque) {
+
+                omega = 0;
+
+                /*
+                 * The motor is stalled. No mechanical movement occurs.
+                 * Keep the electromagnetic torque because the current is
+                 * still physically meaningful.
+                 */
+
+                double electricalPower =
+                        voltage * current;
+
+                double copperLoss =
+                        current * current * resistance;
+
+                state.voltage(voltage);
+                state.current(current);
+                state.backEmf(0);
+                state.electromagneticTorque(
+                        electromagneticTorque
+                );
+                state.loadTorque(0);
+                state.frictionTorque(0);
+                state.netTorque(0);
+                state.angularVelocity(0);
+                state.angularAcceleration(0);
+                state.rpm(0);
+                state.electricalPower(electricalPower);
+                state.mechanicalPower(0);
+                state.copperLoss(copperLoss);
+
+                return;
+            }
         }
 
-        double signedLoadTorque = loadTorque * directionOrOne(omega, electromagneticTorque);
+        /*
+         * Load torque always opposes rotation.
+         */
+
+        double signedLoadTorque =
+                loadMagnitude * direction;
 
         /*
-         * Net torque.
+         * -----------------------------------------------------------------
+         * Net mechanical torque
+         * -----------------------------------------------------------------
          */
+
         double netTorque =
                 electromagneticTorque
                         - signedLoadTorque
                         - frictionTorque;
 
         /*
-         * Mechanical equation:
+         * -----------------------------------------------------------------
+         * Mechanical equation
          *
-         * alpha = T / J
+         *     alpha = T / J
+         * -----------------------------------------------------------------
          */
-        double inertia = Math.max(parameters.inertia(), 1e-9);
 
         double angularAcceleration =
                 netTorque / inertia;
 
-        omega += angularAcceleration * deltaTime;
+        /*
+         * Integrate angular velocity.
+         */
+
+        double newOmega =
+                omega + angularAcceleration * deltaTime;
 
         /*
-         * Do not allow numerical integration to cross zero when the
-         * remaining torque is opposing the current direction.
+         * -----------------------------------------------------------------
+         * Prevent numerical crossing through zero.
+         *
+         * Example:
+         *
+         *     +100 RPM
+         *     strong braking torque
+         *
+         * The timestep could mathematically jump to -20 RPM.
+         *
+         * A physical motor should first reach zero, then reverse only if
+         * the torque continues in the reverse direction.
+         * -----------------------------------------------------------------
          */
-        if (Math.signum(omega) != Math.signum(
-                angularAcceleration == 0 ? omega : angularAcceleration
-        ) && Math.abs(omega) < 1e-5) {
-            omega = 0;
+
+        if (omega != 0
+                && Math.signum(omega) != Math.signum(newOmega)
+                && Math.signum(angularAcceleration) != Math.signum(omega)) {
+
+            newOmega = 0;
+        }
+
+        omega = newOmega;
+
+        /*
+         * -----------------------------------------------------------------
+         * Maximum RPM
+         * -----------------------------------------------------------------
+         */
+
+        double maxAngularVelocity =
+                Math.abs(
+                        MotorParameters.rpmToRadPerSecond(
+                                parameters.maxRPM()
+                        )
+                );
+
+        if (maxAngularVelocity > 0) {
+
+            omega = clamp(
+                    omega,
+                    -maxAngularVelocity,
+                    maxAngularVelocity
+            );
         }
 
         /*
-         * Mechanical speed limit.
+         * If the motor has reached its mechanical speed limit while still
+         * accelerating in that direction, remove the excess acceleration.
          */
-        double maxAngularVelocity =
-                MotorParameters.rpmToRadPerSecond(parameters.maxRPM());
 
-        omega = clamp(
-                omega,
-                -maxAngularVelocity,
-                maxAngularVelocity
-        );
+        if (maxAngularVelocity > 0
+                && Math.abs(omega) >= maxAngularVelocity
+                && Math.signum(angularAcceleration)
+                == Math.signum(omega)) {
 
-        /*
-         * At the speed limit, prevent the state from accumulating
-         * acceleration in the same direction.
-         */
-        if (Math.abs(omega) >= maxAngularVelocity
-                && Math.signum(omega) == Math.signum(angularAcceleration)) {
             angularAcceleration = 0;
         }
+
+        /*
+         * -----------------------------------------------------------------
+         * Recalculate quantities from the final mechanical state.
+         *
+         * This ensures the stored back-EMF corresponds to the stored RPM.
+         * -----------------------------------------------------------------
+         */
+
+        backEmf =
+                parameters.backEmfConstant() * omega;
 
         double rpm =
                 MotorParameters.radPerSecondToRPM(omega);
 
         /*
-         * Electrical input power.
+         * -----------------------------------------------------------------
+         * Power
+         * -----------------------------------------------------------------
+         *
+         * Electrical input:
+         *
+         *     P = V * I
+         *
+         * Mechanical electromagnetic power:
+         *
+         *     P = T * omega
+         *
+         * Copper loss:
+         *
+         *     P = I²R
          */
-        double electricalPower = voltage * current;
 
-        /*
-         * Mechanical output power.
-         */
+        double electricalPower =
+                voltage * current;
+
         double mechanicalPower =
                 electromagneticTorque * omega;
 
-        /*
-         * Copper loss:
-         *
-         * P = I²R
-         */
         double copperLoss =
                 current * current * resistance;
 
         /*
-         * Store the complete state.
+         * -----------------------------------------------------------------
+         * Store complete state.
+         * -----------------------------------------------------------------
          */
+
         state.voltage(voltage);
         state.current(current);
         state.backEmf(backEmf);
-        state.electromagneticTorque(electromagneticTorque);
+        state.electromagneticTorque(
+                electromagneticTorque
+        );
         state.loadTorque(signedLoadTorque);
         state.frictionTorque(frictionTorque);
         state.netTorque(netTorque);
         state.angularVelocity(omega);
-        state.angularAcceleration(angularAcceleration);
+        state.angularAcceleration(
+                angularAcceleration
+        );
         state.rpm(rpm);
         state.electricalPower(electricalPower);
         state.mechanicalPower(mechanicalPower);
@@ -235,14 +446,19 @@ public final class MotorPhysics {
     /**
      * Calculates the steady-state current at a given voltage and speed.
      *
-     * This is useful for displaying or predicting the motor's operating
-     * point without advancing the simulation.
+     *     I = (V - Ke*omega) / R
      */
     public static double calculateSteadyStateCurrent(
             MotorParameters parameters,
             double voltage,
             double rpm
     ) {
+        if (parameters == null)
+            return 0;
+
+        double resistance =
+                Math.max(parameters.resistance(), EPSILON);
+
         double omega =
                 MotorParameters.rpmToRadPerSecond(rpm);
 
@@ -250,7 +466,8 @@ public final class MotorPhysics {
                 parameters.backEmfConstant() * omega;
 
         double current =
-                (voltage - backEmf) / parameters.resistance();
+                (finiteOrZero(voltage) - backEmf)
+                        / resistance;
 
         return clamp(
                 current,
@@ -261,11 +478,16 @@ public final class MotorPhysics {
 
     /**
      * Calculates back EMF at a given RPM.
+     *
+     *     E = Ke * omega
      */
     public static double calculateBackEmf(
             MotorParameters parameters,
             double rpm
     ) {
+        if (parameters == null)
+            return 0;
+
         double omega =
                 MotorParameters.rpmToRadPerSecond(rpm);
 
@@ -274,21 +496,28 @@ public final class MotorPhysics {
 
     /**
      * Calculates electromagnetic torque from current.
+     *
+     *     T = Kt * I
      */
     public static double calculateTorque(
             MotorParameters parameters,
             double current
     ) {
+        if (parameters == null)
+            return 0;
+
         return parameters.torqueConstant()
                 * clamp(
-                current,
+                finiteOrZero(current),
                 -parameters.maxCurrent(),
                 parameters.maxCurrent()
         );
     }
 
     /**
-     * Calculates mechanical output power.
+     * Calculates mechanical power.
+     *
+     *     P = T * omega
      */
     public static double calculateMechanicalPower(
             double torque,
@@ -297,45 +526,51 @@ public final class MotorPhysics {
         double omega =
                 MotorParameters.rpmToRadPerSecond(rpm);
 
-        return torque * omega;
+        return finiteOrZero(torque) * omega;
     }
 
     /**
-     * Returns the approximate current required to produce a given torque.
+     * Calculates the current required to produce a given torque.
+     *
+     *     I = T / Kt
      */
     public static double calculateCurrentForTorque(
             MotorParameters parameters,
             double torque
     ) {
+        if (parameters == null
+                || Math.abs(parameters.torqueConstant()) <= EPSILON) {
+            return 0;
+        }
+
         return clamp(
-                torque / parameters.torqueConstant(),
+                finiteOrZero(torque)
+                        / parameters.torqueConstant(),
                 -parameters.maxCurrent(),
                 parameters.maxCurrent()
         );
     }
 
-    private static double directionOrOne(
-            double speed,
-            double torque
-    ) {
-        if (Math.abs(speed) > 1e-6)
-            return Math.signum(speed);
-
-        if (Math.abs(torque) > 1e-6)
-            return Math.signum(torque);
-
-        return 1.0;
-    }
-
+    /**
+     * Clamps a value to the supplied range.
+     */
     private static double clamp(
             double value,
             double min,
             double max
     ) {
-        return Math.max(min, Math.min(max, value));
+        return Math.max(
+                min,
+                Math.min(max, value)
+        );
     }
 
+    /**
+     * Converts invalid floating-point values to zero.
+     */
     private static double finiteOrZero(double value) {
-        return Double.isFinite(value) ? value : 0;
+        return Double.isFinite(value)
+                ? value
+                : 0;
     }
 }
