@@ -60,6 +60,7 @@ import org.patryk3211.powergrid.collections.forge.ModdedSoundEventsImpl;
 import org.patryk3211.powergrid.commands.PerformanceCommand;
 import org.patryk3211.powergrid.compat.cc.CCBridge;
 import org.patryk3211.powergrid.compat.cold_sweat.ColdSweatBridge;
+import org.patryk3211.powergrid.compat.electroenergetics.ElectroEnergeticsBridgeRegistration;
 import org.patryk3211.powergrid.compat.tfmg.TFMGBridge;
 import org.patryk3211.powergrid.compat.tfmg.TFMGProxyImpl;
 import org.patryk3211.powergrid.compat.tis3d.ModdedSerialInterfaceProviders;
