@@ -7,6 +7,7 @@ import net.createmod.catnip.math.VoxelShaper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -131,22 +132,16 @@ public class ElectroEnergeticsBridgeBlock
         return getNodePositions(level, pos, state).get(id);
     }
 
+
+
     @Override
-    public Component getNodeLabel(
+    public MutableComponent getNodeLabel(
             Level level,
             BlockPos pos,
             BlockState state,
             int id
-    ) {
-        /*
-         * EE's current ElectricalDeviceBlock API requires a
-         * MutableComponent-compatible return type.
-         */
-        return Component.literal(
-                id == 0
-                        ? "Power Grid +"
-                        : "Power Grid -"
-        );
+    ){
+        return Component.literal(id == 0 ? "Power Grid +" : "Power Grid -");
     }
 
     @Override
