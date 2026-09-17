@@ -32,7 +32,9 @@ dependencies {
     modImplementation("com.tterrag.registrate:Registrate:${registrate_forge_version}")
 
     modImplementation "dev.architectury:architectury-neoforge:${architectury_api_version}"
-
+    // Create: Electro Energetics compatibility
+    modCompileOnly("maven.modrinth:qYJdIoAx:11zlqCk5")
+    modLocalRuntime("maven.modrinth:qYJdIoAx:11zlqCk5")
     // Just Enough Items
     modCompileOnly "mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"
 

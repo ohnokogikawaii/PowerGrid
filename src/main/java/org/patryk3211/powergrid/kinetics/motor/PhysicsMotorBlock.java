@@ -12,7 +12,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ *//*
+
 package org.patryk3211.powergrid.kinetics.motor;
 
 import com.simibubi.create.content.kinetics.base.IRotate;
@@ -53,12 +54,14 @@ public abstract class PhysicsMotorBlock
 
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
-    /*
+    */
+/*
      * Keep the same physical shape and terminal arrangement as the
      * existing electric motor.
      *
      * The existing ElectricMotorBlock is not modified.
-     */
+     *//*
+
     public static final VoxelShapeHolder SHAPES = new VoxelShapeHolder();
 
     private static final TerminalBoundingBox[] NORTH_TERMINALS = new TerminalBoundingBox[] {
@@ -88,11 +91,13 @@ public abstract class PhysicsMotorBlock
         );
     }
 
-    /**
+    */
+/**
      * Returns the electrical/mechanical parameters used by this motor.
      *
      * Small, medium and large motors override this method.
-     */
+     *//*
+
     public abstract MotorParameters getMotorParameters();
 
     @Override
@@ -225,12 +230,14 @@ public abstract class PhysicsMotorBlock
         return true;
     }
 
-    /**
+    */
+/**
      * Holder for the common motor shapes.
      *
      * This avoids changing the existing ElectricMotorBlock while
      * allowing the three new motors to share the same geometry.
-     */
+     *//*
+
     public static class VoxelShapeHolder {
 
         public final net.minecraft.world.phys.shapes.VoxelShape NORTH_SHAPE =
@@ -257,4 +264,4 @@ public abstract class PhysicsMotorBlock
                         )
                 );
     }
-}
+}*/

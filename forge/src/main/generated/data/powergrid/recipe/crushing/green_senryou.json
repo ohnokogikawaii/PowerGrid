@@ -1,0 +1,20 @@
+{
+  "type": "create:crushing",
+  "ingredients": [
+    {
+      "item": "minecraft:kelp"
+    }
+  ],
+  "processing_time": 100,
+  "results": [
+    {
+      "count": 1,
+      "id": "minecraft:green_dye"
+    },
+    {
+      "chance": 0.25,
+      "count": 1,
+      "id": "minecraft:green_dye"
+    }
+  ]
+}

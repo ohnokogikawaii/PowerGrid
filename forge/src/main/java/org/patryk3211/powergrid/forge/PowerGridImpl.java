@@ -100,6 +100,10 @@ public class PowerGridImpl {
     public PowerGridImpl(IEventBus modEventBus, ModContainer modContainer) {
         context = ModLoadingContext.get();
         bus = modEventBus;
+        if (Platform.isModLoaded("electroenergetics")) {
+            ElectroEnergeticsBridgeRegistration.register(bus);
+        }
+
         container = modContainer;
         bus.register(PowerGridImpl.class);
 
