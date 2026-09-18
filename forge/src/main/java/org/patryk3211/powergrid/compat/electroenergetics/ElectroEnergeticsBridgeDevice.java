@@ -37,12 +37,12 @@ public class ElectroEnergeticsBridgeDevice
         lastPowerGridVoltage = voltage;
 
         /*
-         * Power Grid -> EE
+         * Power Grid -> Electro Energetics
          *
          * Node 0 = +
          * Node 1 = -
          *
-         * A small internal resistance prevents the bridge from becoming
+         * A small resistance prevents the bridge from behaving as
          * an ideal infinite-power source.
          */
         double resistance = 0.01;

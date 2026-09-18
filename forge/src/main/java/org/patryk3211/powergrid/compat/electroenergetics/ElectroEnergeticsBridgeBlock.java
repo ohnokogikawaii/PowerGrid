@@ -1,11 +1,9 @@
 package org.patryk3211.powergrid.compat.electroenergetics;
 
-import com.george_vi.electroenergetics.foundation.device.ElectricalDeviceBlock;
 import com.george_vi.electroenergetics.devices.device.SimulatedDeviceType;
+import com.george_vi.electroenergetics.foundation.device.ElectricalDeviceBlock;
 import com.simibubi.create.foundation.block.IBE;
-import net.createmod.catnip.math.VoxelShaper;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.InteractionHand;
@@ -23,7 +21,6 @@ import org.jetbrains.annotations.Nullable;
 import org.patryk3211.powergrid.electricity.base.IDecoratedTerminal;
 import org.patryk3211.powergrid.electricity.base.Rotation4ElectricBlock;
 import org.patryk3211.powergrid.electricity.base.TerminalBoundingBox;
-import org.patryk3211.powergrid.electricity.base.terminals.BlockStateTerminalCollection;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -57,7 +54,14 @@ public class ElectroEnergeticsBridgeBlock
             };
 
     private static final VoxelShape SHAPE =
-            box(4.5, 0, 3.5, 11.5, 4, 12.5);
+            box(
+                    4.5,
+                    0,
+                    3.5,
+                    11.5,
+                    4,
+                    12.5
+            );
 
     public ElectroEnergeticsBridgeBlock(Properties properties) {
         super(properties);
@@ -79,7 +83,7 @@ public class ElectroEnergeticsBridgeBlock
     @Override
     public BlockEntityType<? extends ElectroEnergeticsBridgeBlockEntity>
     getBlockEntityType() {
-        return ElectroEnergeticsCompat.BRIDGE_BLOCK_ENTITY.get();
+        return ElectroEnergeticsBridgeRegistration.BRIDGE_BLOCK_ENTITY.get();
     }
 
     @Override
@@ -88,10 +92,10 @@ public class ElectroEnergeticsBridgeBlock
     }
 
     /*
-     * EE node positions.
+     * EE nodes
      *
-     * Node 0 = Power Grid positive
-     * Node 1 = Power Grid negative
+     * Node 0 = Power Grid +
+     * Node 1 = Power Grid -
      */
     @Override
     public Map<Integer, Vec3> getNodePositions(
@@ -129,10 +133,12 @@ public class ElectroEnergeticsBridgeBlock
             BlockState state,
             int id
     ) {
-        return getNodePositions(level, pos, state).get(id);
+        return getNodePositions(
+                level,
+                pos,
+                state
+        ).get(id);
     }
-
-
 
     @Override
     public MutableComponent getNodeLabel(
@@ -140,8 +146,12 @@ public class ElectroEnergeticsBridgeBlock
             BlockPos pos,
             BlockState state,
             int id
-    ){
-        return Component.literal(id == 0 ? "Power Grid +" : "Power Grid -");
+    ) {
+        return Component.literal(
+                id == 0
+                        ? "Power Grid +"
+                        : "Power Grid -"
+        );
     }
 
     @Override
@@ -163,6 +173,9 @@ public class ElectroEnergeticsBridgeBlock
             InteractionHand hand,
             BlockHitResult hit
     ) {
+        /*
+         * PASS keeps the normal block interaction available.
+         */
         return InteractionResult.PASS;
     }
 
@@ -173,7 +186,10 @@ public class ElectroEnergeticsBridgeBlock
 
     @Override
     protected void createBlockStateDefinition(
-            StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder
+            StateDefinition.Builder<
+                    net.minecraft.world.level.block.Block,
+                    BlockState
+                    > builder
     ) {
         super.createBlockStateDefinition(builder);
     }

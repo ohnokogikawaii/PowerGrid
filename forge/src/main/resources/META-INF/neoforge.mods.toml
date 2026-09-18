@@ -55,6 +55,14 @@ versionRange = "[${sable_version},)"
 ordering = "NONE"
 side = "BOTH"
 
+[[dependencies.powergrid]]
+modId = "electroenergetics"
+type = "optional"
+versionRange = "[1.1.1,)"
+ordering = "AFTER"
+side = "BOTH"
+
+
 [[mixins]]
 config = "powergrid.mixins.json"
 [[mixins]]

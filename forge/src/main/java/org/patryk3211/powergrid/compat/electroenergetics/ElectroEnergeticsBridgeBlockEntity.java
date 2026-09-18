@@ -15,7 +15,11 @@ public class ElectroEnergeticsBridgeBlockEntity
             BlockPos pos,
             BlockState state
     ) {
-        super(type, pos, state);
+        super(
+                type,
+                pos,
+                state
+        );
     }
 
     @Override
@@ -29,6 +33,9 @@ public class ElectroEnergeticsBridgeBlockEntity
         builder.setTerminalCount(2);
     }
 
+    /**
+     * Voltage between the Power Grid positive and negative terminals.
+     */
     public double getBridgeVoltage() {
         if (level == null) {
             return 0.0;
@@ -55,6 +62,9 @@ public class ElectroEnergeticsBridgeBlockEntity
                 - negative.getVoltage();
     }
 
+    /**
+     * Absolute Power Grid positive-side node voltage.
+     */
     public double getPositiveVoltage() {
         if (level == null) {
             return 0.0;
@@ -75,6 +85,9 @@ public class ElectroEnergeticsBridgeBlockEntity
                 : node.getVoltage();
     }
 
+    /**
+     * Absolute Power Grid negative-side node voltage.
+     */
     public double getNegativeVoltage() {
         if (level == null) {
             return 0.0;

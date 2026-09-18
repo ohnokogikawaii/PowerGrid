@@ -154,6 +154,8 @@ public class ModdedBlocks {
                 .build()
             .register();
 
+
+
     public static final BlockEntry<PotatoBatteryBlock> POTATO_BATTERY = REGISTRATE.block("potato_battery", PotatoBatteryBlock::new)
             .blockstate(horizontalBlock(state -> state.getValue(PotatoBatteryBlock.BAKED) ? "block/baked_potato_battery" : "block/potato_battery"))
             .initialProperties(() -> Blocks.NETHER_WART)
