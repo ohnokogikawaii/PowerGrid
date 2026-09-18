@@ -82,12 +82,7 @@ public final class ElectroEnergeticsBridgeRegistration {
             BLOCK_ENTITIES.register(
                     "electroenergetics_bridge",
                     () -> BlockEntityType.Builder.of(
-                            (pos, state) ->
-                                    new ElectroEnergeticsBridgeBlockEntity(
-                                            BRIDGE_BLOCK_ENTITY.get(),
-                                            pos,
-                                            state
-                                    ),
+                            ElectroEnergeticsBridgeBlockEntity::new,
                             BRIDGE_BLOCK.get()
                     ).build(null)
             );

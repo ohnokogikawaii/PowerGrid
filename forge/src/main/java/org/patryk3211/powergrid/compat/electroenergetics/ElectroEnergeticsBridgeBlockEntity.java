@@ -11,12 +11,11 @@ public class ElectroEnergeticsBridgeBlockEntity
         extends ElectricBlockEntity {
 
     public ElectroEnergeticsBridgeBlockEntity(
-            BlockEntityType<?> type,
             BlockPos pos,
             BlockState state
     ) {
         super(
-                type,
+                ElectroEnergeticsBridgeRegistration.BRIDGE_BLOCK_ENTITY.get(),
                 pos,
                 state
         );
