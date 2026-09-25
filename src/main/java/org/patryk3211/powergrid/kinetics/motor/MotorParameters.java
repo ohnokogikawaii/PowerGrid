@@ -1,3 +1,4 @@
+
 package org.patryk3211.powergrid.kinetics.motor;
 
 /**
@@ -147,78 +148,118 @@ public final class MotorParameters {
     /**
      * Small motor.
      *
-     * 256 V
-     * 5 kW
-     * 200 N*m
-     * 240 RPM rated
-     * 256 RPM maximum
+     * 300 V
+     * 10 kW electrical input
+     * approximately 9 kW mechanical output
+     * approximately 58,500 SU maximum
+     *
+     * 58,500 SU / 64 = 914.06 RPM
      */
     public static MotorParameters small() {
         return new MotorParameters(
                 "small",
-                256.0,
-                5_000.0,
-                200.0,
-                240.0,
-                256.0,
-                0.2335,
+                300.0,
+                10_000.0,
+
+                // Approximately 9 kW at 914 RPM.
+                94.02,
+
+                914.0625,
+                914.0625,
+
+                // Approximately 10% of input power is electrical loss.
+                0.90,
+
                 0.05,
+
+                2.8207,
+
+                // Approximately 1.2x rated current.
+                40.0,
+
                 10.0,
-                30.0,
-                10.0,
-                5.0
+
+                // Gives a small no-load current.
+                1.41
         );
     }
 
     /**
      * Medium motor.
      *
-     * 512 V
-     * 10 kW
-     * 250 N*m
-     * 380 RPM rated
-     * 512 RPM maximum
+     * 500 V
+     * 15 kW electrical input
+     * approximately 13.5 kW mechanical output
+     * approximately 87,800 SU maximum
+     *
+     * 87,800 SU / 64 = 1,371.875 RPM
      */
     public static MotorParameters medium() {
         return new MotorParameters(
                 "medium",
-                512.0,
-                10_000.0,
-                250.0,
-                380.0,
-                512.0,
-                0.729,
+                500.0,
+                15_000.0,
+
+                // Approximately 13.5 kW at 1,372 RPM.
+                93.97,
+
+                1371.875,
+                1371.875,
+
+                // Approximately 10% of input power is electrical loss.
+                1.67,
+
                 0.10,
-                12.5,
+
+                3.1323,
+
+                // Approximately 1.2x rated current.
+                36.0,
+
                 30.0,
-                30.0,
-                8.0
+
+                // Gives a small no-load current.
+                0.94
         );
     }
 
     /**
      * Large motor.
      *
-     * 1024 V
-     * 18 kW
-     * 300 N*m
-     * 570 RPM rated
-     * 768 RPM maximum
+     * 1,000 V
+     * 18 kW electrical input
+     * approximately 16.2 kW mechanical output
+     * approximately 105,300 SU maximum
+     *
+     * 105,300 SU / 64 = 1,645.3125 RPM
      */
     public static MotorParameters large() {
         return new MotorParameters(
                 "large",
-                1_024.0,
+                1_000.0,
                 18_000.0,
-                300.0,
-                570.0,
-                768.0,
-                1.61,
+
+                // Approximately 16.2 kW at 1,645 RPM.
+                94.02,
+
+                1645.3125,
+                1645.3125,
+
+                // Approximately 10% of input power is electrical loss.
+                5.56,
+
                 0.20,
-                16.7,
-                30.0,
+
+                5.2235,
+
+                // Approximately 1.2x rated current.
+                22.0,
+
                 80.0,
-                12.0
+
+                // Gives a small no-load current.
+                0.78
         );
     }
 }
+
