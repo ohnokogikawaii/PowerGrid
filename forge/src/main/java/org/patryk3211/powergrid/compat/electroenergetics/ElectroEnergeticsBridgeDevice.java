@@ -13,7 +13,17 @@ public class ElectroEnergeticsBridgeDevice
         extends SimulatedDevice
         implements TickingElectricalDevice {
 
+    /*
+     * Last Power Grid voltage exported to EE.
+     */
     private double lastPowerGridVoltage;
+
+    /*
+     * Last current measured by EE through the bridge.
+     *
+     * This is currently only recorded.
+     * It is not yet fed back into Power Grid.
+     */
     private double lastElectroEnergeticsCurrent;
 
     public ElectroEnergeticsBridgeDevice(
@@ -30,6 +40,17 @@ public class ElectroEnergeticsBridgeDevice
         );
     }
 
+    /*
+     * ------------------------------------------------------------
+     * EE pre-tick
+     * ------------------------------------------------------------
+     *
+     * Power Grid voltage is converted into an EE voltage source.
+     *
+     * Node 0 = +
+     * Node 1 = -
+     */
+
     @Override
     public void preTick(BridgeCollector bridges) {
         double voltage = getPowerGridVoltage();
@@ -37,13 +58,12 @@ public class ElectroEnergeticsBridgeDevice
         lastPowerGridVoltage = voltage;
 
         /*
-         * Power Grid -> Electro Energetics
+         * A small series resistance prevents the bridge from
+         * behaving as a mathematically ideal zero-resistance
+         * voltage source.
          *
-         * Node 0 = +
-         * Node 1 = -
-         *
-         * A small resistance prevents the bridge from behaving as
-         * an ideal infinite-power source.
+         * This can be changed later when the electrical coupling
+         * model is expanded.
          */
         double resistance = 0.01;
 
@@ -56,6 +76,17 @@ public class ElectroEnergeticsBridgeDevice
                 );
     }
 
+    /*
+     * ------------------------------------------------------------
+     * EE post-tick
+     * ------------------------------------------------------------
+     *
+     * Current is currently measured only.
+     *
+     * Future implementation can use this value to calculate
+     * current/power drawn from the Power Grid network.
+     */
+
     @Override
     public void postTick(SimulationResults results) {
         lastElectroEnergeticsCurrent =
@@ -65,6 +96,12 @@ public class ElectroEnergeticsBridgeDevice
                         1
                 );
     }
+
+    /*
+     * ------------------------------------------------------------
+     * Power Grid voltage acquisition
+     * ------------------------------------------------------------
+     */
 
     private double getPowerGridVoltage() {
         if (level == null) {
@@ -78,6 +115,12 @@ public class ElectroEnergeticsBridgeDevice
 
         return bridge.getBridgeVoltage();
     }
+
+    /*
+     * ------------------------------------------------------------
+     * Debug / future integration accessors
+     * ------------------------------------------------------------
+     */
 
     public double getLastPowerGridVoltage() {
         return lastPowerGridVoltage;

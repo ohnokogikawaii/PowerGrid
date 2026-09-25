@@ -1,32 +1,17 @@
-/*
- * Copyright 2025 patryk3211
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.patryk3211.powergrid.kinetics.motor;
 
 /**
- * Static parameters describing a DC electric motor.
+ * Static parameters of a DC motor.
  *
- * All electrical and mechanical values use SI units:
- * - voltage: V
- * - current: A
- * - resistance: ohm
- * - inductance: H
- * - torque: N*m
- * - inertia: kg*m^2
- * - angular velocity: rad/s
- * - power: W
+ * All values use SI units:
+ *
+ * Voltage       V
+ * Current       A
+ * Resistance    ohm
+ * Inductance    H
+ * Torque        N*m
+ * Inertia       kg*m^2
+ * Speed         RPM
  */
 public final class MotorParameters {
 
@@ -42,23 +27,26 @@ public final class MotorParameters {
     private final double inductance;
 
     /**
-     * Torque constant in N*m/A.
+     * Torque constant [N*m/A].
      *
-     * For a conventional permanent-magnet DC motor, the numerical
-     * value of the torque constant is also used as the back-EMF
-     * constant when the latter is expressed in V*s/rad.
+     * For the simplified permanent-magnet DC motor model,
+     * Ke has the same numerical value in V*s/rad.
      */
     private final double torqueConstant;
 
     /**
-     * Maximum permitted motor current.
-     *
-     * This is intentionally higher than the rated current so that
-     * starting current and short-duration overload can occur.
+     * Maximum permitted current.
      */
     private final double maxCurrent;
 
+    /**
+     * Rotor inertia [kg*m^2].
+     */
     private final double inertia;
+
+    /**
+     * Mechanical friction torque [N*m].
+     */
     private final double frictionTorque;
 
     public MotorParameters(
@@ -125,15 +113,6 @@ public final class MotorParameters {
         return torqueConstant;
     }
 
-    /**
-     * Back-EMF constant in V*s/rad.
-     *
-     * For the simplified permanent-magnet DC motor model:
-     *
-     *     E = Ke * omega
-     *
-     * and Ke == Kt numerically.
-     */
     public double backEmfConstant() {
         return torqueConstant;
     }
@@ -150,13 +129,6 @@ public final class MotorParameters {
         return frictionTorque;
     }
 
-    /**
-     * Rated current estimated from rated torque.
-     *
-     * For a DC motor:
-     *
-     *     T = Kt * I
-     */
     public double ratedCurrent() {
         if (torqueConstant <= 0)
             return 0;
@@ -164,39 +136,22 @@ public final class MotorParameters {
         return ratedTorque / torqueConstant;
     }
 
-    /**
-     * Converts RPM to rad/s.
-     */
     public static double rpmToRadPerSecond(double rpm) {
         return rpm * Math.PI / 30.0;
     }
 
-    /**
-     * Converts rad/s to RPM.
-     */
-    public static double radPerSecondToRPM(double radiansPerSecond) {
-        return radiansPerSecond * 30.0 / Math.PI;
+    public static double radPerSecondToRPM(double radPerSecond) {
+        return radPerSecond * 30.0 / Math.PI;
     }
 
     /**
      * Small motor.
      *
-     * Rated operating point:
-     *
-     *     256 V
-     *     5 kW
-     *     200 N*m
-     *     240 RPM
-     *
-     * Rated current:
-     *
-     *     200 / 10 = 20 A
-     *
-     * At rated speed:
-     *
-     *     E = Ke * omega
-     *
-     * giving approximately 251.3 V back-EMF.
+     * 256 V
+     * 5 kW
+     * 200 N*m
+     * 240 RPM rated
+     * 256 RPM maximum
      */
     public static MotorParameters small() {
         return new MotorParameters(
@@ -218,18 +173,11 @@ public final class MotorParameters {
     /**
      * Medium motor.
      *
-     * Rated operating point:
-     *
-     *     512 V
-     *     10 kW
-     *     250 N*m
-     *     380 RPM
-     *
-     * Rated current:
-     *
-     *     250 / 12.5 = 20 A
-     *
-     * At rated speed the back-EMF is approximately 497.4 V.
+     * 512 V
+     * 10 kW
+     * 250 N*m
+     * 380 RPM rated
+     * 512 RPM maximum
      */
     public static MotorParameters medium() {
         return new MotorParameters(
@@ -251,18 +199,11 @@ public final class MotorParameters {
     /**
      * Large motor.
      *
-     * Rated operating point:
-     *
-     *     1024 V
-     *     18 kW
-     *     300 N*m
-     *     570 RPM
-     *
-     * Rated current:
-     *
-     *     300 / 16.7 ~= 17.96 A
-     *
-     * At rated speed the back-EMF is approximately 995.1 V.
+     * 1024 V
+     * 18 kW
+     * 300 N*m
+     * 570 RPM rated
+     * 768 RPM maximum
      */
     public static MotorParameters large() {
         return new MotorParameters(

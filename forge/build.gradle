@@ -42,7 +42,7 @@ dependencies {
 //    modCompileOnly "me.shedaniel:RoughlyEnoughItems-api-forge:$rei_version"
 
     // Create: The Factory Must Grow
-    implementation files('libs/tfmg-1.2.5.jar')
+    implementation files('libs/tfmg-1.2.3.jar')
 
     // TIS-3D
     modCompileOnly("maven.modrinth:tis3d-renewed:${tis3d_version}")

@@ -124,8 +124,7 @@ import org.patryk3211.powergrid.kinetics.generator.inductionrotor.InductionRotor
 import org.patryk3211.powergrid.kinetics.generator.inductionrotor.LargeInductionRotorBlock;
 import org.patryk3211.powergrid.kinetics.generator.inductionrotor.VerticalCommutatorBlock;
 import org.patryk3211.powergrid.kinetics.generator.winding.WindingBlock;
-import org.patryk3211.powergrid.kinetics.motor.ConstantSpeedMotorBlock;
-import org.patryk3211.powergrid.kinetics.motor.ElectricMotorBlock;
+import org.patryk3211.powergrid.kinetics.motor.*;
 import org.patryk3211.powergrid.kinetics.plotter.PlotterBlock;
 import org.patryk3211.powergrid.kinetics.punchcard.PunchCardReaderBlock;
 import org.patryk3211.powergrid.kinetics.rheostat.RheostatBlock;
@@ -154,7 +153,124 @@ public class ModdedBlocks {
                 .build()
             .register();
 
+    public static final BlockEntry<SmallElectricMotorBlock> SMALL_ELECTRIC_MOTOR =
+            REGISTRATE.block(
+                            "small_electric_motor",
+                            SmallElectricMotorBlock::new
+                    )
+                    .blockstate(
+                            alternateDirectionalBlock(
+                                    state -> switch (
+                                            state.getValue(
+                                                    SmallElectricMotorBlock.FACING
+                                            ).getAxis()
+                                            ) {
+                                        case X, Z ->
+                                                "block/electric_motor/block";
+                                        case Y ->
+                                                "block/electric_motor/block_vertical";
+                                    }
+                            )
+                    )
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .transform(CStress.setCapacity(16))
+                    .transform(CResistance.setResistance(0.2335f))
+                    .transform(pickaxeOnly())
+                    .onRegister(
+                            BlockStressValues.setGeneratorSpeed(
+                                    256,
+                                    true
+                            )
+                    )
+                    .defaultLoot()
+                    .item()
+                    .model(
+                            itemWithParent(
+                                    "block/electric_motor/item"
+                            )
+                    )
+                    .build()
+                    .register();
 
+
+    public static final BlockEntry<MediumElectricMotorBlock> MEDIUM_ELECTRIC_MOTOR =
+            REGISTRATE.block(
+                            "medium_electric_motor",
+                            MediumElectricMotorBlock::new
+                    )
+                    .blockstate(
+                            alternateDirectionalBlock(
+                                    state -> switch (
+                                            state.getValue(
+                                                    MediumElectricMotorBlock.FACING
+                                            ).getAxis()
+                                            ) {
+                                        case X, Z ->
+                                                "block/electric_motor/block";
+                                        case Y ->
+                                                "block/electric_motor/block_vertical";
+                                    }
+                            )
+                    )
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .transform(CStress.setCapacity(32))
+                    .transform(CResistance.setResistance(0.729f))
+                    .transform(pickaxeOnly())
+                    .onRegister(
+                            BlockStressValues.setGeneratorSpeed(
+                                    512,
+                                    true
+                            )
+                    )
+                    .defaultLoot()
+                    .item()
+                    .model(
+                            itemWithParent(
+                                    "block/electric_motor/item"
+                            )
+                    )
+                    .build()
+                    .register();
+
+
+    public static final BlockEntry<LargeElectricMotorBlock> LARGE_ELECTRIC_MOTOR =
+            REGISTRATE.block(
+                            "large_electric_motor",
+                            LargeElectricMotorBlock::new
+                    )
+                    .blockstate(
+                            alternateDirectionalBlock(
+                                    state -> switch (
+                                            state.getValue(
+                                                    LargeElectricMotorBlock.FACING
+                                            ).getAxis()
+                                            ) {
+                                        case X, Z ->
+                                                "block/electric_motor/block";
+                                        case Y ->
+                                                "block/electric_motor/block_vertical";
+                                    }
+                            )
+                    )
+                    .initialProperties(() -> Blocks.IRON_BLOCK)
+                    .transform(CStress.setCapacity(64))
+                    .transform(CResistance.setResistance(1.61f))
+                    .transform(pickaxeOnly())
+                    .onRegister(
+                            BlockStressValues.setGeneratorSpeed(
+                                    768,
+                                    true
+                            )
+                    )
+                    .defaultLoot()
+                    .item()
+                    .model(
+                            itemWithParent(
+                                    "block/electric_motor/item"
+                            )
+                    )
+                    .build()
+                    .register();
 
     public static final BlockEntry<PotatoBatteryBlock> POTATO_BATTERY = REGISTRATE.block("potato_battery", PotatoBatteryBlock::new)
             .blockstate(horizontalBlock(state -> state.getValue(PotatoBatteryBlock.BAKED) ? "block/baked_potato_battery" : "block/potato_battery"))

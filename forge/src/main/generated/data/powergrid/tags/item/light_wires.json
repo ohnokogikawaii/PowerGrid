@@ -6,6 +6,7 @@
     "powergrid:debug_wire",
     "powergrid:double_wire",
     "powergrid:quad_wire",
-    "powergrid:octa_wire"
+    "powergrid:octa_wire",
+    "powergrid:long_wire"
   ]
 }

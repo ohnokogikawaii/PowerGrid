@@ -1,7 +1,6 @@
 package org.patryk3211.powergrid.compat.electroenergetics;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.patryk3211.powergrid.electricity.base.ElectricBlockEntity;
 import org.patryk3211.powergrid.electricity.base.ElectricBehaviour;
@@ -15,26 +14,36 @@ public class ElectroEnergeticsBridgeBlockEntity
             BlockState state
     ) {
         super(
-                ElectroEnergeticsBridgeRegistration.BRIDGE_BLOCK_ENTITY.get(),
+                ElectroEnergeticsBridgeRegistration
+                        .BRIDGE_BLOCK_ENTITY
+                        .get(),
                 pos,
                 state
         );
     }
 
+    /*
+     * ------------------------------------------------------------
+     * Power Grid circuit
+     * ------------------------------------------------------------
+     *
+     * Terminal 0 = +
+     * Terminal 1 = -
+     */
+
     @Override
     public void buildCircuit(CircuitBuilder builder) {
-        /*
-         * Power Grid side:
-         *
-         * terminal 0 = +
-         * terminal 1 = -
-         */
         builder.setTerminalCount(2);
     }
 
-    /**
-     * Voltage between the Power Grid positive and negative terminals.
+    /*
+     * ------------------------------------------------------------
+     * Differential voltage
+     * ------------------------------------------------------------
+     *
+     * This is the voltage that is exported to Electro Energetics.
      */
+
     public double getBridgeVoltage() {
         if (level == null) {
             return 0.0;
@@ -61,9 +70,12 @@ public class ElectroEnergeticsBridgeBlockEntity
                 - negative.getVoltage();
     }
 
-    /**
-     * Absolute Power Grid positive-side node voltage.
+    /*
+     * ------------------------------------------------------------
+     * Positive terminal voltage
+     * ------------------------------------------------------------
      */
+
     public double getPositiveVoltage() {
         if (level == null) {
             return 0.0;
@@ -79,14 +91,19 @@ public class ElectroEnergeticsBridgeBlockEntity
         OwnedFloatingNode node =
                 behaviour.getTerminal(0);
 
-        return node == null
-                ? 0.0
-                : node.getVoltage();
+        if (node == null) {
+            return 0.0;
+        }
+
+        return node.getVoltage();
     }
 
-    /**
-     * Absolute Power Grid negative-side node voltage.
+    /*
+     * ------------------------------------------------------------
+     * Negative terminal voltage
+     * ------------------------------------------------------------
      */
+
     public double getNegativeVoltage() {
         if (level == null) {
             return 0.0;
@@ -102,8 +119,10 @@ public class ElectroEnergeticsBridgeBlockEntity
         OwnedFloatingNode node =
                 behaviour.getTerminal(1);
 
-        return node == null
-                ? 0.0
-                : node.getVoltage();
+        if (node == null) {
+            return 0.0;
+        }
+
+        return node.getVoltage();
     }
 }

@@ -1,0 +1,15 @@
+{
+  "type": "create:splashing",
+  "ingredients": [
+    {
+      "item": "minecraft:granite"
+    }
+  ],
+  "results": [
+    {
+      "chance": 0.10,
+      "count": 8,
+      "id": "minecraft:redstone"
+    }
+  ]
+}

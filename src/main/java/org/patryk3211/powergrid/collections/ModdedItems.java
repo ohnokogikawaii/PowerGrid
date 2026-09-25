@@ -24,6 +24,7 @@ import com.tterrag.registrate.util.nullness.NonNullUnaryOperator;
 import dev.architectury.injectables.annotations.ExpectPlatform;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ItemLike;
 import org.patryk3211.powergrid.AbstractPowerGridRegistrate;
 import org.patryk3211.powergrid.PowerGrid;
 import org.patryk3211.powergrid.circuits.circuitboard.IncompleteCircuitItem;
@@ -171,6 +172,23 @@ public class ModdedItems {
             )
             .lang("Octa Copper Wire")
             .register();
+    public static final ItemEntry<WireItem> LONG_WIRE = REGISTRATE.item("long_wire", WireItem::new)
+            .transform(WireItem.properties(
+                    0.005f,
+                    256,
+                    0.2f,
+                    2.0f,
+                    60,
+                    PowerGrid.texture("special/long_wire"),
+                    1.0075f,
+                    1.125f,
+                    0.1f,
+                    false,
+                    false,
+                    false))
+            .tag(ModdedTags.Item.WIRES.tag, ModdedTags.Item.LIGHT_WIRES.tag)
+            .lang("long Wire")
+            .register();
 
     public static final ItemEntry<CordItem> CORD = REGISTRATE.item("copper_cord", CordItem::new)
             .transform(WireItem.properties(0.0015f, 16, 0.5f, 2.0f, 60,
@@ -252,7 +270,7 @@ public class ModdedItems {
     public static final ItemEntry<Item> ELECTRICAL_GIZMO = ingredient("electrical_gizmo");
     public static final ItemEntry<Item> ZINC_SHEET = ingredient("zinc_sheet", ModdedTags.Item.PLATES.tag);
     public static final ItemEntry<Item> PINS = ingredient("pins");
-
+    public static final ItemEntry<Item> GOLD_COPPER_INGOT = ingredient("gold_copper_ingot");
     public static final ItemEntry<Item> RELAY = ingredient("relay");
     public static final ItemEntry<Item> RELAY_DPDT = REGISTRATE.item("relay_dpdt", Item::new)
             .lang("Double Pole Relay")
@@ -344,6 +362,7 @@ public class ModdedItems {
     public static final ItemEntry<DisplayModuleItem> DISPLAY_MODULE = REGISTRATE.item("display_module", DisplayModuleItem::new)
             .lang("Display Module")
             .register();
+    public static final ItemLike INCOMPLETE_WIRE = ingredient("incomplete_wire");;
 
     @SuppressWarnings("EmptyMethod")
     public static void register() { /* Initialize static fields. */ }

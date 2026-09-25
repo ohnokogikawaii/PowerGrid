@@ -17,7 +17,7 @@ public final class ElectroEnergeticsBridgeRegistration {
 
     /*
      * ------------------------------------------------------------
-     * Blocks
+     * Block
      * ------------------------------------------------------------
      */
 
@@ -41,7 +41,7 @@ public final class ElectroEnergeticsBridgeRegistration {
 
     /*
      * ------------------------------------------------------------
-     * Items
+     * Item
      * ------------------------------------------------------------
      */
 
@@ -65,7 +65,7 @@ public final class ElectroEnergeticsBridgeRegistration {
 
     /*
      * ------------------------------------------------------------
-     * Block Entities
+     * Block Entity
      * ------------------------------------------------------------
      */
 
@@ -89,7 +89,7 @@ public final class ElectroEnergeticsBridgeRegistration {
 
     /*
      * ------------------------------------------------------------
-     * Initialization
+     * Registration
      * ------------------------------------------------------------
      */
 

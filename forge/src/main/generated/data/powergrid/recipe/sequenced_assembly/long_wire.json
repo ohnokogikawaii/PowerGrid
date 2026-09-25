@@ -1,0 +1,84 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "item": "powergrid:gold_copper_ingot"
+  },
+  "loops": 1,
+  "results": [
+    {
+      "chance": 100.0,
+      "id": "powergrid:long_wire",
+      "count": 10
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "powergrid:incomplete_wire"
+  }
+}

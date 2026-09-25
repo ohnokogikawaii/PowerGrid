@@ -2,7 +2,6 @@ package org.patryk3211.powergrid.compat.electroenergetics;
 
 import com.george_vi.electroenergetics.CEERegistries;
 import com.george_vi.electroenergetics.devices.device.SimulatedDeviceType;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -19,8 +18,8 @@ public final class ElectroEnergeticsCompat {
     /**
      * Electro Energetics simulated-device registration.
      *
-     * Block / Item / BlockEntity are intentionally registered separately
-     * in ElectroEnergeticsBridgeRegistration.
+     * The block, item and block entity are registered separately in
+     * ElectroEnergeticsBridgeRegistration.
      */
     public static final DeferredRegister<SimulatedDeviceType<?>> DEVICES =
             DeferredRegister.create(
@@ -36,6 +35,7 @@ public final class ElectroEnergeticsCompat {
                     "electroenergetics_bridge",
                     () -> new SimulatedDeviceType<>(
                             PowerGrid.asResource("electroenergetics_bridge"),
+
                             (type, level, pos, deviceSD) ->
                                     new ElectroEnergeticsBridgeDevice(
                                             type,
@@ -43,8 +43,11 @@ public final class ElectroEnergeticsCompat {
                                             pos,
                                             deviceSD
                                     ),
+
                             List.of(
-                                    ElectroEnergeticsBridgeRegistration.BRIDGE_BLOCK.get()
+                                    ElectroEnergeticsBridgeRegistration
+                                            .BRIDGE_BLOCK
+                                            .get()
                             )
                     )
             );

@@ -1,19 +1,3 @@
-/*
- * Copyright 2025 patryk3211
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *//*
-
 package org.patryk3211.powergrid.kinetics.motor;
 
 import com.simibubi.create.content.kinetics.base.IRotate;
@@ -34,6 +18,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.patryk3211.powergrid.collections.ModdedBlockEntities;
 import org.patryk3211.powergrid.electricity.base.DirectionalElectricBlock;
 import org.patryk3211.powergrid.electricity.base.IDecoratedTerminal;
@@ -46,84 +32,110 @@ import org.patryk3211.powergrid.kinetics.base.ElectricKineticBlock;
 
 import java.util.List;
 
-import static org.patryk3211.powergrid.PowerGrid.maxRPM;
-
 public abstract class PhysicsMotorBlock
         extends ElectricKineticBlock
-        implements IBE<PhysicsMotorBlockEntity>, IHaveElectricProperties, IAcceptCord {
+        implements IBE<PhysicsMotorBlockEntity>,
+        IHaveElectricProperties,
+        IAcceptCord {
 
-    public static final DirectionProperty FACING = BlockStateProperties.FACING;
+    public static final DirectionProperty FACING =
+            BlockStateProperties.FACING;
 
-    */
-/*
-     * Keep the same physical shape and terminal arrangement as the
-     * existing electric motor.
-     *
-     * The existing ElectricMotorBlock is not modified.
-     *//*
+    public static final VoxelShape NORTH_SHAPE =
+            Shapes.or(
+                    box(
+                            3, 3, 0.5,
+                            13, 13, 15.5
+                    ),
+                    box(
+                            2.5, 2.5, 10.5,
+                            13.5, 13.5, 15.5
+                    )
+            );
 
-    public static final VoxelShapeHolder SHAPES = new VoxelShapeHolder();
+    public static final VoxelShape UP_SHAPE =
+            Shapes.or(
+                    box(
+                            3, 0.5, 3,
+                            13, 15.5, 13
+                    ),
+                    box(
+                            2.5, 0.5, 2.5,
+                            13.5, 5.5, 13.5
+                    )
+            );
 
-    private static final TerminalBoundingBox[] NORTH_TERMINALS = new TerminalBoundingBox[] {
-            new TerminalBoundingBox(
-                    IDecoratedTerminal.POSITIVE,
-                    5, 13, 14,
-                    7, 14, 16
-            ).withColor(IDecoratedTerminal.RED),
+    private static final TerminalBoundingBox[] NORTH_TERMINALS =
+            new TerminalBoundingBox[] {
 
-            new TerminalBoundingBox(
-                    IDecoratedTerminal.NEGATIVE,
-                    9, 13, 14,
-                    11, 14, 16
-            ).withColor(IDecoratedTerminal.BLUE)
-    };
+                    new TerminalBoundingBox(
+                            IDecoratedTerminal.POSITIVE,
+                            5, 13, 14,
+                            7, 14, 16
+                    ).withColor(
+                            IDecoratedTerminal.RED
+                    ),
 
-    public PhysicsMotorBlock(Properties properties) {
+                    new TerminalBoundingBox(
+                            IDecoratedTerminal.NEGATIVE,
+                            9, 13, 14,
+                            11, 14, 16
+                    ).withColor(
+                            IDecoratedTerminal.BLUE
+                    )
+            };
+
+    protected PhysicsMotorBlock(Properties properties) {
         super(properties);
 
         setTerminalCollection(
                 DirectionalElectricBlock.directionalNorthTerminals(
                         this,
                         NORTH_TERMINALS,
-                        SHAPES.NORTH_SHAPE,
-                        SHAPES.UP_SHAPE
+                        NORTH_SHAPE,
+                        UP_SHAPE
                 )
         );
     }
 
-    */
-/**
-     * Returns the electrical/mechanical parameters used by this motor.
-     *
-     * Small, medium and large motors override this method.
-     *//*
-
     public abstract MotorParameters getMotorParameters();
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(
+            StateDefinition.Builder<Block, BlockState> builder
+    ) {
         super.createBlockStateDefinition(builder);
         builder.add(FACING);
     }
 
-    public Direction getPreferredFacing(BlockPlaceContext context) {
+    public Direction getPreferredFacing(
+            BlockPlaceContext context
+    ) {
         Direction preferredSide = null;
 
         for (Direction side : Iterate.directions) {
-            BlockState blockState = context.getLevel()
-                    .getBlockState(
-                            context.getClickedPos().relative(side)
-                    );
 
-            if (blockState.getBlock() instanceof IRotate) {
-                if (((IRotate) blockState.getBlock()).hasShaftTowards(
+            BlockState blockState =
+                    context.getLevel()
+                            .getBlockState(
+                                    context.getClickedPos()
+                                            .relative(side)
+                            );
+
+            if (blockState.getBlock()
+                    instanceof IRotate rotate) {
+
+                if (rotate.hasShaftTowards(
                         context.getLevel(),
-                        context.getClickedPos().relative(side),
+                        context.getClickedPos()
+                                .relative(side),
                         blockState,
                         side.getOpposite()
                 )) {
-                    if (preferredSide != null &&
-                            preferredSide.getAxis() != side.getAxis()) {
+
+                    if (preferredSide != null
+                            && preferredSide.getAxis()
+                            != side.getAxis()) {
 
                         preferredSide = null;
                         break;
@@ -141,22 +153,29 @@ public abstract class PhysicsMotorBlock
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        Direction preferred = getPreferredFacing(context);
+    public BlockState getStateForPlacement(
+            BlockPlaceContext context
+    ) {
+        Direction preferred =
+                getPreferredFacing(context);
 
-        if (preferred == null ||
-                (context.getPlayer() != null &&
-                        context.getPlayer().isShiftKeyDown())) {
+        if (preferred == null
+                || (
+                context.getPlayer() != null
+                        && context.getPlayer()
+                        .isShiftKeyDown()
+        )) {
 
-            Direction nearestLookingDirection =
+            Direction looking =
                     context.getNearestLookingDirection();
 
             return defaultBlockState().setValue(
                     FACING,
-                    context.getPlayer() != null &&
-                            context.getPlayer().isShiftKeyDown()
-                            ? nearestLookingDirection
-                            : nearestLookingDirection.getOpposite()
+                    context.getPlayer() != null
+                            && context.getPlayer()
+                            .isShiftKeyDown()
+                            ? looking
+                            : looking.getOpposite()
             );
         }
 
@@ -167,7 +186,9 @@ public abstract class PhysicsMotorBlock
     }
 
     @Override
-    public Direction.Axis getRotationAxis(BlockState state) {
+    public Direction.Axis getRotationAxis(
+            BlockState state
+    ) {
         return state.getValue(FACING).getAxis();
     }
 
@@ -182,12 +203,14 @@ public abstract class PhysicsMotorBlock
     }
 
     @Override
-    public Class<PhysicsMotorBlockEntity> getBlockEntityClass() {
+    public Class<PhysicsMotorBlockEntity>
+    getBlockEntityClass() {
         return PhysicsMotorBlockEntity.class;
     }
 
     @Override
-    public BlockEntityType<? extends PhysicsMotorBlockEntity> getBlockEntityType() {
+    public BlockEntityType<? extends PhysicsMotorBlockEntity>
+    getBlockEntityType() {
         return ModdedBlockEntities.PHYSICS_MOTOR.get();
     }
 
@@ -197,9 +220,15 @@ public abstract class PhysicsMotorBlock
             Player player,
             List<Component> tooltip
     ) {
-        MotorParameters parameters = getMotorParameters();
+        MotorParameters parameters =
+                getMotorParameters();
 
-        Resistance.series(parameters.resistance(), player, tooltip);
+        Resistance.series(
+                (float) parameters.resistance(),
+                player,
+                tooltip
+        );
+
         Voltage.max(
                 (int) parameters.ratedVoltage(),
                 player,
@@ -208,18 +237,26 @@ public abstract class PhysicsMotorBlock
     }
 
     @Override
-    public BlockState rotate(BlockState state, Rotation rot) {
+    public BlockState rotate(
+            BlockState state,
+            Rotation rotation
+    ) {
         return state.setValue(
                 FACING,
-                rot.rotate(state.getValue(FACING))
+                rotation.rotate(
+                        state.getValue(FACING)
+                )
         );
     }
 
     @Override
     @SuppressWarnings("deprecation")
-    public BlockState mirror(BlockState state, Mirror mirrorIn) {
+    public BlockState mirror(
+            BlockState state,
+            Mirror mirror
+    ) {
         return state.rotate(
-                mirrorIn.getRotation(
+                mirror.getRotation(
                         state.getValue(FACING)
                 )
         );
@@ -229,39 +266,4 @@ public abstract class PhysicsMotorBlock
     public boolean renderPlug() {
         return true;
     }
-
-    */
-/**
-     * Holder for the common motor shapes.
-     *
-     * This avoids changing the existing ElectricMotorBlock while
-     * allowing the three new motors to share the same geometry.
-     *//*
-
-    public static class VoxelShapeHolder {
-
-        public final net.minecraft.world.phys.shapes.VoxelShape NORTH_SHAPE =
-                net.minecraft.world.phys.shapes.Shapes.or(
-                        Block.box(
-                                3, 3, 0.5,
-                                13, 13, 15.5
-                        ),
-                        Block.box(
-                                2.5, 2.5, 10.5,
-                                13.5, 13.5, 15.5
-                        )
-                );
-
-        public final net.minecraft.world.phys.shapes.VoxelShape UP_SHAPE =
-                net.minecraft.world.phys.shapes.Shapes.or(
-                        Block.box(
-                                3, 0.5, 3,
-                                13, 15.5, 13
-                        ),
-                        Block.box(
-                                2.5, 0.5, 2.5,
-                                13.5, 5.5, 13.5
-                        )
-                );
-    }
-}*/
+}

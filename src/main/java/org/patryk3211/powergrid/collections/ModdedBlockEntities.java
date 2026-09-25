@@ -89,6 +89,7 @@ import org.patryk3211.powergrid.kinetics.generator.winding.WindingBlockEntity;
 import org.patryk3211.powergrid.kinetics.motor.ConstantSpeedMotorBlockEntity;
 import org.patryk3211.powergrid.kinetics.motor.ElectricMotorBlockEntity;
 import org.patryk3211.powergrid.kinetics.motor.ElectricMotorRenderer;
+import org.patryk3211.powergrid.kinetics.motor.PhysicsMotorBlockEntity;
 import org.patryk3211.powergrid.kinetics.plotter.PlotterBlockEntity;
 import org.patryk3211.powergrid.kinetics.plotter.PlotterRenderer;
 import org.patryk3211.powergrid.kinetics.punchcard.PunchCardReaderBlockEntity;
@@ -105,6 +106,20 @@ public class ModdedBlockEntities {
     public static final BlockEntityEntry<LiFePO4BatteryBlockEntity> LIFEPO4 =
             REGISTRATE.blockEntity("lifepo4", LiFePO4BatteryBlockEntity::new)
                     .validBlock(ModdedBlocks.LIFEPO4)
+                    .register();
+
+    public static final BlockEntityEntry<PhysicsMotorBlockEntity> PHYSICS_MOTOR =
+            REGISTRATE.blockEntity(
+                            "physics_motor",
+                            PhysicsMotorBlockEntity::new
+                    )
+                    .visual(() -> HalfShaftVisual::new)
+                    .validBlocks(
+                            ModdedBlocks.SMALL_ELECTRIC_MOTOR,
+                            ModdedBlocks.MEDIUM_ELECTRIC_MOTOR,
+                            ModdedBlocks.LARGE_ELECTRIC_MOTOR
+                    )
+                    .renderer(() -> ElectricMotorRenderer::new)
                     .register();
 
     public static final BlockEntityEntry<SolarBlockEntity> SOLAR =

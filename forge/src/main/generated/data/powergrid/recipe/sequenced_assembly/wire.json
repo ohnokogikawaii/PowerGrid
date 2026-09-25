@@ -1,0 +1,84 @@
+{
+  "type": "create:sequenced_assembly",
+  "ingredient": {
+    "tag": "c:plates/copper"
+  },
+  "loops": 1,
+  "results": [
+    {
+      "chance": 100.0,
+      "id": "powergrid:wire",
+      "count": 10
+    }
+  ],
+  "sequence": [
+    {
+      "type": "create:pressing",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    },
+    {
+      "type": "create:cutting",
+      "ingredients": [
+        {
+          "item": "powergrid:incomplete_wire"
+        }
+      ],
+      "results": [
+        {
+          "id": "powergrid:incomplete_wire"
+        }
+      ]
+    }
+  ],
+  "transitional_item": {
+    "id": "powergrid:incomplete_wire"
+  }
+}

@@ -30,36 +30,60 @@ public class ElectroEnergeticsBridgeBlock
         implements IBE<ElectroEnergeticsBridgeBlockEntity>,
         ElectricalDeviceBlock<ElectroEnergeticsBridgeDevice> {
 
+    /*
+     * ------------------------------------------------------------
+     * Power Grid terminals
+     * ------------------------------------------------------------
+     *
+     * Terminal 0 = positive
+     * Terminal 1 = negative
+     *
+     * These are intentionally kept as Power Grid terminals so that
+     * existing Power Grid wires can connect to the bridge.
+     */
+
     private static final TerminalBoundingBox[] TERMINALS =
             new TerminalBoundingBox[] {
                     new TerminalBoundingBox(
                             IDecoratedTerminal.POSITIVE,
                             5.5,
-                            1,
+                            1.0,
                             1.5,
                             10.5,
-                            4,
+                            4.0,
                             4.5
                     ).withColor(IDecoratedTerminal.RED),
 
                     new TerminalBoundingBox(
                             IDecoratedTerminal.NEGATIVE,
                             5.5,
-                            1,
+                            1.0,
                             11.5,
                             10.5,
-                            4,
+                            4.0,
                             14.5
                     ).withColor(IDecoratedTerminal.BLUE)
             };
 
+    /*
+     * ------------------------------------------------------------
+     * Physical block shape
+     * ------------------------------------------------------------
+     *
+     * Rotation4ElectricBlock uses this shape together with the
+     * terminal bounding boxes to construct the final block outline.
+     *
+     * The slightly larger central body also makes the block itself
+     * easier to interact with.
+     */
+
     private static final VoxelShape SHAPE =
             box(
                     4.5,
-                    0,
+                    0.0,
                     3.5,
                     11.5,
-                    4,
+                    5.0,
                     12.5
             );
 
@@ -75,6 +99,12 @@ public class ElectroEnergeticsBridgeBlock
         );
     }
 
+    /*
+     * ------------------------------------------------------------
+     * Power Grid Block Entity
+     * ------------------------------------------------------------
+     */
+
     @Override
     public Class<ElectroEnergeticsBridgeBlockEntity> getBlockEntityClass() {
         return ElectroEnergeticsBridgeBlockEntity.class;
@@ -83,8 +113,16 @@ public class ElectroEnergeticsBridgeBlock
     @Override
     public BlockEntityType<? extends ElectroEnergeticsBridgeBlockEntity>
     getBlockEntityType() {
-        return ElectroEnergeticsBridgeRegistration.BRIDGE_BLOCK_ENTITY.get();
+        return ElectroEnergeticsBridgeRegistration
+                .BRIDGE_BLOCK_ENTITY
+                .get();
     }
+
+    /*
+     * ------------------------------------------------------------
+     * Electro Energetics simulated device
+     * ------------------------------------------------------------
+     */
 
     @Override
     public SimulatedDeviceType<ElectroEnergeticsBridgeDevice> getDevice() {
@@ -92,11 +130,24 @@ public class ElectroEnergeticsBridgeBlock
     }
 
     /*
-     * EE nodes
+     * ------------------------------------------------------------
+     * Electro Energetics nodes
+     * ------------------------------------------------------------
+     *
+     * EE uses positions relative to the bottom corner of the block.
+     *
+     * These positions deliberately match the centers of the
+     * corresponding Power Grid terminals.
      *
      * Node 0 = Power Grid +
      * Node 1 = Power Grid -
+     *
+     * Terminal centers:
+     *
+     * + : (8, 2.5, 3) / 16
+     * - : (8, 2.5, 13) / 16
      */
+
     @Override
     public Map<Integer, Vec3> getNodePositions(
             Level level,
@@ -105,21 +156,27 @@ public class ElectroEnergeticsBridgeBlock
     ) {
         Map<Integer, Vec3> nodes = new LinkedHashMap<>();
 
+        /*
+         * Positive node.
+         */
         nodes.put(
                 0,
                 new Vec3(
-                        4.0 / 16.0,
-                        1.0,
-                        8.0 / 16.0
+                        8.0 / 16.0,
+                        2.5 / 16.0,
+                        3.0 / 16.0
                 )
         );
 
+        /*
+         * Negative node.
+         */
         nodes.put(
                 1,
                 new Vec3(
-                        12.0 / 16.0,
-                        1.0,
-                        8.0 / 16.0
+                        8.0 / 16.0,
+                        2.5 / 16.0,
+                        13.0 / 16.0
                 )
         );
 
@@ -140,6 +197,12 @@ public class ElectroEnergeticsBridgeBlock
         ).get(id);
     }
 
+    /*
+     * ------------------------------------------------------------
+     * Node labels
+     * ------------------------------------------------------------
+     */
+
     @Override
     public MutableComponent getNodeLabel(
             Level level,
@@ -148,11 +211,24 @@ public class ElectroEnergeticsBridgeBlock
             int id
     ) {
         return Component.literal(
-                id == 0
-                        ? "Power Grid +"
-                        : "Power Grid -"
+                switch (id) {
+                    case 0 -> "Power Grid +";
+                    case 1 -> "Power Grid -";
+                    default -> "Power Grid Node";
+                }
         );
     }
+
+    /*
+     * ------------------------------------------------------------
+     * Node hitbox
+     * ------------------------------------------------------------
+     *
+     * EE uses this value for node interaction/outline size.
+     *
+     * 6/16 is deliberately larger than the default 4/16 because
+     * these nodes are placed on the small Power Grid terminals.
+     */
 
     @Override
     public float getNodeSize(
@@ -161,8 +237,35 @@ public class ElectroEnergeticsBridgeBlock
             BlockState state,
             int id
     ) {
-        return 4.0f / 16.0f;
+        return 6.0f / 16.0f;
     }
+
+    /*
+     * ------------------------------------------------------------
+     * Node accessibility
+     * ------------------------------------------------------------
+     *
+     * Both nodes are externally connectable.
+     */
+
+    @Override
+    public boolean isNodeAccessible(
+            Level level,
+            BlockPos pos,
+            BlockState state,
+            int id
+    ) {
+        return id == 0 || id == 1;
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * Block interaction
+     * ------------------------------------------------------------
+     *
+     * PASS allows normal Power Grid / Create interactions to
+     * continue through the block.
+     */
 
     @Override
     public InteractionResult use(
@@ -173,11 +276,14 @@ public class ElectroEnergeticsBridgeBlock
             InteractionHand hand,
             BlockHitResult hit
     ) {
-        /*
-         * PASS keeps the normal block interaction available.
-         */
         return InteractionResult.PASS;
     }
+
+    /*
+     * ------------------------------------------------------------
+     * Power Grid wire compatibility
+     * ------------------------------------------------------------
+     */
 
     @Override
     public boolean accepts(ItemStack wireStack) {
