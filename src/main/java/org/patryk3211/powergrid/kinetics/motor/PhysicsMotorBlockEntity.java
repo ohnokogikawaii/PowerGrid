@@ -27,6 +27,7 @@ public class PhysicsMotorBlockEntity
      * 20 ticks per second = 0.05 seconds.
      */
     protected static final double DELTA_TIME = 0.05;
+
     /**
      * Createに現在出力している回転速度。
      *
@@ -34,6 +35,7 @@ public class PhysicsMotorBlockEntity
      * generatedSpeed はCreateへ実際に渡している速度。
      */
     protected float generatedSpeed = 0;
+
     protected final MotorState motorState =
             new MotorState();
 
@@ -48,15 +50,20 @@ public class PhysicsMotorBlockEntity
      * terminal 0 = positive
      * terminal 1 = negative
      *
-     * Resistance represents the winding resistance.
-     * Voltage represents the back EMF and inductive equivalent.
+     * Resistance represents:
+     *
+     *     winding resistance
+     *     + inductive equivalent resistance
+     *     + dynamic current limiting resistance
+     *
+     * Voltage represents the motor's back EMF and the
+     * backward-Euler inductive source term.
      */
     protected VoltageSourceCoupling motorSource;
 
     /**
-     * External mechanical load applied by the Create kinetic network.
-     *
-     * This is kept separate from the motor's own electromagnetic torque.
+     * External mechanical load applied by the Create kinetic
+     * network.
      */
     protected double externalLoadTorque;
 
@@ -72,8 +79,11 @@ public class PhysicsMotorBlockEntity
      * Get the parameters of the motor represented by this block.
      */
     protected MotorParameters parameters() {
-        if (getBlockState().getBlock()
-                instanceof PhysicsMotorBlock block) {
+
+        if (
+                getBlockState().getBlock()
+                        instanceof PhysicsMotorBlock block
+        ) {
 
             return block.getMotorParameters();
         }
@@ -87,12 +97,18 @@ public class PhysicsMotorBlockEntity
     public void addBehaviours(
             List<BlockEntityBehaviour> behaviours
     ) {
-        super.addBehaviours(behaviours);
+        super.addBehaviours(
+                behaviours
+        );
 
         electricBehaviour =
-                new ElectricBehaviour(this);
+                new ElectricBehaviour(
+                        this
+                );
 
-        behaviours.add(electricBehaviour);
+        behaviours.add(
+                electricBehaviour
+        );
 
         MotorParameters parameters =
                 parameters();
@@ -114,7 +130,9 @@ public class PhysicsMotorBlockEntity
                 );
 
         if (thermalBehaviour != null)
-            behaviours.add(thermalBehaviour);
+            behaviours.add(
+                    thermalBehaviour
+            );
     }
 
     /**
@@ -123,9 +141,14 @@ public class PhysicsMotorBlockEntity
      */
     @Override
     public void tick() {
+
         assert level != null;
 
-        if (!level.isClientSide || isVirtual()) {
+        if (
+                !level.isClientSide
+                        || isVirtual()
+        ) {
+
             electricalTick();
         }
 
@@ -134,9 +157,11 @@ public class PhysicsMotorBlockEntity
 
     @Override
     public void remove() {
+
         super.remove();
 
         if (electricBehaviour != null) {
+
             electricBehaviour.remove();
         }
     }
@@ -150,17 +175,17 @@ public class PhysicsMotorBlockEntity
         /*
          * Permanent-magnet DC motor equivalent circuit:
          *
-         *       R
+         *       R_eq
          *  + ---/\/\/---[ E_back ]--- -
          *
          * terminal 0 -> terminal 1
          *
-         * VoltageSourceCoupling provides:
+         * The electrical resistance is updated every simulation
+         * step to include:
          *
-         *     I = (Vterminal - E) / R
-         *
-         * Therefore the back EMF naturally reduces current
-         * as motor speed increases.
+         *     winding resistance
+         *     inductive equivalent
+         *     current limiting
          */
         motorSource =
                 builder.addInternalNode(
@@ -193,12 +218,15 @@ public class PhysicsMotorBlockEntity
         );
 
         if (maxStress <= 0) {
+
             externalLoadTorque = 0;
+
             return;
         }
 
         double loadRatio =
-                currentStress / maxStress;
+                currentStress
+                        / maxStress;
 
         loadRatio =
                 Math.max(
@@ -216,10 +244,26 @@ public class PhysicsMotorBlockEntity
 
     /**
      * Perform one electrical/mechanical simulation step.
+     *
+     * Order:
+     *
+     * 1. Read the current solved by PowerGrid.
+     * 2. Read terminal voltage.
+     * 3. Advance the mechanical motor model.
+     * 4. Calculate back EMF.
+     * 5. Build the next electrical equivalent.
+     * 6. Increase equivalent resistance when current limiting
+     *    is required.
+     * 7. Feed the equivalent back into PowerGrid.
      */
     public void electricalTick() {
-        if (level == null || level.isClientSide)
+
+        if (
+                level == null
+                        || level.isClientSide
+        ) {
             return;
+        }
 
         if (motorSource == null)
             return;
@@ -239,7 +283,7 @@ public class PhysicsMotorBlockEntity
         /*
          * Voltage across the external motor terminals.
          */
-        double voltage =
+        double terminalVoltage =
                 motorSource.getPositive().getVoltage()
                         - (
                         motorSource.getNegative() != null
@@ -247,30 +291,21 @@ public class PhysicsMotorBlockEntity
                                 : 0
                 );
 
-        if (!Double.isFinite(voltage))
-            voltage = 0;
+        if (!Double.isFinite(terminalVoltage))
+            terminalVoltage = 0;
 
         /*
-         * Advance the mechanical model using the current that
-         * was actually solved by the electrical network.
+         * Advance the mechanical model.
          *
-         * This produces:
-         *
-         *     current
-         *        ↓
-         *     torque
-         *        ↓
-         *     acceleration
-         *        ↓
-         *     RPM
-         *        ↓
-         *     back EMF
+         * MotorPhysics internally applies maxCurrent so that a
+         * temporary electrical solver overshoot cannot create
+         * impossible electromagnetic torque.
          */
         MotorPhysics.update(
                 parameters,
                 motorState,
                 current,
-                voltage,
+                terminalVoltage,
                 externalLoadTorque,
                 DELTA_TIME
         );
@@ -279,15 +314,10 @@ public class PhysicsMotorBlockEntity
          * Build the equivalent electrical model for the next
          * solver iteration.
          *
-         * For:
-         *
-         *     V = E + R I + L dI/dt
-         *
-         * backward Euler gives:
-         *
          *     R_eq = R + L/dt
          *
-         *     V_eq = E + L/dt * I_previous
+         *     V_eq =
+         *         E + L/dt * I_previous
          */
         double equivalentResistance =
                 MotorPhysics.equivalentResistance(
@@ -303,32 +333,29 @@ public class PhysicsMotorBlockEntity
                 );
 
         /*
-         * Limit the maximum current.
+         * Apply the actual motor current limit.
          *
-         * The normal starting condition has almost zero back EMF,
-         * so this still produces a large inrush current, but never
-         * exceeds the motor's defined maximum current.
+         * The resistance is increased only when necessary.
+         *
+         * At low current:
+         *
+         *     normal winding + inductive resistance
+         *
+         * At excessive current:
+         *
+         *     additional virtual resistance
+         *
+         * This preserves the normal motor characteristics while
+         * preventing excessive armature current.
          */
-        double maximumCurrent =
-                parameters.maxCurrent();
-
-        if (maximumCurrent > 0
-                && equivalentResistance > 0) {
-
-            double theoreticalCurrent =
-                    Math.abs(equivalentVoltage)
-                            / equivalentResistance;
-
-            if (theoreticalCurrent > maximumCurrent) {
-
-                equivalentResistance =
-                        Math.max(
-                                equivalentResistance,
-                                Math.abs(equivalentVoltage)
-                                        / maximumCurrent
-                        );
-            }
-        }
+        equivalentResistance =
+                MotorPhysics.currentLimitedResistance(
+                        parameters,
+                        motorState,
+                        terminalVoltage,
+                        equivalentVoltage,
+                        equivalentResistance
+                );
 
         /*
          * Apply the electrical equivalent for the next solver pass.
@@ -349,8 +376,10 @@ public class PhysicsMotorBlockEntity
             double copperLoss =
                     motorState.copperLoss();
 
-            if (Double.isFinite(copperLoss)
-                    && copperLoss > 0) {
+            if (
+                    Double.isFinite(copperLoss)
+                            && copperLoss > 0
+            ) {
 
                 thermalBehaviour.applyTickPower(
                         copperLoss
@@ -376,8 +405,13 @@ public class PhysicsMotorBlockEntity
             rpm = 0;
 
         /*
-         * Limit both the motor's own maximum RPM and Create's
-         * global maximum RPM.
+         * Limit both:
+         *
+         * 1. the motor's physical maximum RPM
+         * 2. Create's global maximum RPM
+         *
+         * The motor parameters therefore remain the physical
+         * authority.
          */
         double allowed =
                 Math.min(
@@ -394,14 +428,23 @@ public class PhysicsMotorBlockEntity
                         )
                 );
 
-        motorState.rpm(rpm);
+        motorState.rpm(
+                rpm
+        );
 
         /*
-         * Create's generatedSpeed must include the block's
-         * facing direction.
+         * Convert physical motor RPM into Create RPM.
+         *
+         * Example:
+         *
+         *     physical 256 RPM
+         *     × 3.570556640625
+         *     = 914.0625 Create RPM
          */
         double createRPM =
-                rpm * parameters().createSpeedMultiplier();
+                rpm
+                        * parameters()
+                        .createSpeedMultiplier();
 
         float speed =
                 convertToDirection(
@@ -412,17 +455,15 @@ public class PhysicsMotorBlockEntity
                                 )
                 );
 
-        /*
-         * generatedSpeed is the value actually supplied to
-         * Create's kinetic network.
-         *
-         * Do NOT compare against getGeneratedSpeed() here because
-         * getGeneratedSpeed() returns this same motor RPM converted
-         * to the facing direction.
-         */
-        if (Math.abs(speed - generatedSpeed) > 0.001f) {
+        if (
+                Math.abs(
+                        speed
+                                - generatedSpeed
+                ) > 0.001f
+        ) {
 
-            generatedSpeed = speed;
+            generatedSpeed =
+                    speed;
 
             updateGeneratedRotation();
         }
@@ -434,8 +475,10 @@ public class PhysicsMotorBlockEntity
         float speed =
                 (float) (
                         motorState.rpm()
-                                * parameters().createSpeedMultiplier()
+                                * parameters()
+                                .createSpeedMultiplier()
                 );
+
         return convertToDirection(
                 speed,
                 getBlockState()
@@ -483,7 +526,7 @@ public class PhysicsMotorBlockEntity
 
     /**
      * 0.0 = stopped
-     * 1.0 = maximum RPM
+     * 1.0 = maximum physical RPM
      */
     public float getSoundRPMFactor() {
 
@@ -495,8 +538,9 @@ public class PhysicsMotorBlockEntity
 
         return (float) Math.min(
                 1,
-                Math.abs(motorState.rpm())
-                        / maximum
+                Math.abs(
+                        motorState.rpm()
+                ) / maximum
         );
     }
 
@@ -515,8 +559,9 @@ public class PhysicsMotorBlockEntity
 
         return (float) Math.min(
                 1.5,
-                Math.abs(motorState.current())
-                        / ratedCurrent
+                Math.abs(
+                        motorState.current()
+                ) / ratedCurrent
         );
     }
 
@@ -533,66 +578,98 @@ public class PhysicsMotorBlockEntity
         );
 
         motorState.voltage(
-                tag.getDouble("MotorVoltage")
+                tag.getDouble(
+                        "MotorVoltage"
+                )
         );
 
         motorState.current(
-                tag.getDouble("MotorCurrent")
+                tag.getDouble(
+                        "MotorCurrent"
+                )
         );
 
         motorState.backEmf(
-                tag.getDouble("MotorBackEmf")
+                tag.getDouble(
+                        "MotorBackEmf"
+                )
         );
 
         motorState.electromagneticTorque(
-                tag.getDouble("MotorTorque")
+                tag.getDouble(
+                        "MotorTorque"
+                )
         );
 
         motorState.loadTorque(
-                tag.getDouble("MotorLoadTorque")
+                tag.getDouble(
+                        "MotorLoadTorque"
+                )
         );
 
         motorState.frictionTorque(
-                tag.getDouble("MotorFriction")
+                tag.getDouble(
+                        "MotorFriction"
+                )
         );
 
         motorState.netTorque(
-                tag.getDouble("MotorNetTorque")
+                tag.getDouble(
+                        "MotorNetTorque"
+                )
         );
 
         motorState.angularVelocity(
-                tag.getDouble("MotorOmega")
+                tag.getDouble(
+                        "MotorOmega"
+                )
         );
 
         motorState.angularAcceleration(
-                tag.getDouble("MotorAlpha")
+                tag.getDouble(
+                        "MotorAlpha"
+                )
         );
 
         motorState.rpm(
-                tag.getDouble("MotorRPM")
+                tag.getDouble(
+                        "MotorRPM"
+                )
         );
 
         motorState.electricalPower(
-                tag.getDouble("MotorElectricalPower")
+                tag.getDouble(
+                        "MotorElectricalPower"
+                )
         );
 
         motorState.mechanicalPower(
-                tag.getDouble("MotorMechanicalPower")
+                tag.getDouble(
+                        "MotorMechanicalPower"
+                )
         );
 
         motorState.copperLoss(
-                tag.getDouble("MotorCopperLoss")
+                tag.getDouble(
+                        "MotorCopperLoss"
+                )
         );
 
         motorState.temperature(
-                tag.getDouble("MotorTemperature")
+                tag.getDouble(
+                        "MotorTemperature"
+                )
         );
 
         /*
          * Rebuild Create's generated rotation from the saved
          * physical motor speed.
          */
-        if (level != null && !level.isClientSide) {
+        if (
+                level != null
+                        && !level.isClientSide
+        ) {
+
             generatedSpeed =
                     getGeneratedSpeed();
 
