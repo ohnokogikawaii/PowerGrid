@@ -400,9 +400,12 @@ public class PhysicsMotorBlockEntity
          * Create's generatedSpeed must include the block's
          * facing direction.
          */
+        double createRPM =
+                rpm * parameters().createSpeedMultiplier();
+
         float speed =
                 convertToDirection(
-                        (float) rpm,
+                        (float) createRPM,
                         getBlockState()
                                 .getValue(
                                         PhysicsMotorBlock.FACING
@@ -429,8 +432,10 @@ public class PhysicsMotorBlockEntity
     public float getGeneratedSpeed() {
 
         float speed =
-                (float) motorState.rpm();
-
+                (float) (
+                        motorState.rpm()
+                                * parameters().createSpeedMultiplier()
+                );
         return convertToDirection(
                 speed,
                 getBlockState()

@@ -1,10 +1,9 @@
-
 package org.patryk3211.powergrid.kinetics.motor;
 
 /**
  * Static parameters of a DC motor.
  *
- * All values use SI units:
+ * All physical motor values use SI units:
  *
  * Voltage       V
  * Current       A
@@ -13,6 +12,19 @@ package org.patryk3211.powergrid.kinetics.motor;
  * Torque        N*m
  * Inertia       kg*m^2
  * Speed         RPM
+ *
+ * The motor's physical speed is limited independently from
+ * Create's kinetic speed.
+ *
+ * Physical motor RPM:
+ *     maximum = maxRPM()
+ *
+ * Create RPM:
+ *     physical RPM * createSpeedMultiplier()
+ *
+ * This allows a physically low-speed, high-torque motor to
+ * generate a large amount of Create stress capacity without
+ * changing the physical motor simulation.
  */
 public final class MotorParameters {
 
@@ -36,7 +48,7 @@ public final class MotorParameters {
     private final double torqueConstant;
 
     /**
-     * Maximum permitted current.
+     * Maximum permitted current [A].
      */
     private final double maxCurrent;
 
@@ -50,6 +62,18 @@ public final class MotorParameters {
      */
     private final double frictionTorque;
 
+    /**
+     * Conversion from physical motor RPM to Create RPM.
+     *
+     * Example:
+     *
+     * physical RPM = 256
+     * multiplier   = 3.570556640625
+     *
+     * Create RPM = 914.0625
+     */
+    private final double createSpeedMultiplier;
+
     public MotorParameters(
             String name,
             double ratedVoltage,
@@ -62,7 +86,8 @@ public final class MotorParameters {
             double torqueConstant,
             double maxCurrent,
             double inertia,
-            double frictionTorque
+            double frictionTorque,
+            double createSpeedMultiplier
     ) {
         this.name = name;
         this.ratedVoltage = ratedVoltage;
@@ -76,6 +101,7 @@ public final class MotorParameters {
         this.maxCurrent = maxCurrent;
         this.inertia = inertia;
         this.frictionTorque = frictionTorque;
+        this.createSpeedMultiplier = createSpeedMultiplier;
     }
 
     public String name() {
@@ -98,6 +124,12 @@ public final class MotorParameters {
         return ratedRPM;
     }
 
+    /**
+     * Maximum physical motor speed.
+     *
+     * This is intentionally independent from Create's
+     * global maxRotationSpeed config.
+     */
     public double maxRPM() {
         return maxRPM;
     }
@@ -114,6 +146,12 @@ public final class MotorParameters {
         return torqueConstant;
     }
 
+    /**
+     * Back-EMF constant.
+     *
+     * For the simplified permanent-magnet DC motor model,
+     * Ke has the same numerical value as Kt.
+     */
     public double backEmfConstant() {
         return torqueConstant;
     }
@@ -130,6 +168,18 @@ public final class MotorParameters {
         return frictionTorque;
     }
 
+    /**
+     * Returns the multiplier used when converting the physical
+     * motor RPM into Create's kinetic RPM.
+     */
+    public double createSpeedMultiplier() {
+        return createSpeedMultiplier;
+    }
+
+    /**
+     * Calculate the rated current from rated torque and
+     * torque constant.
+     */
     public double ratedCurrent() {
         if (torqueConstant <= 0)
             return 0;
@@ -148,118 +198,174 @@ public final class MotorParameters {
     /**
      * Small motor.
      *
-     * 300 V
-     * 10 kW electrical input
-     * approximately 9 kW mechanical output
-     * approximately 58,500 SU maximum
+     * Electrical:
+     *     300 V
+     *     10 kW
      *
-     * 58,500 SU / 64 = 914.06 RPM
+     * Physical motor:
+     *     maximum 256 RPM
+     *
+     * Create:
+     *     256 RPM * 3.570556640625
+     *     = 914.0625 Create RPM
+     *     = approximately 58,500 SU
+     *
+     * The motor therefore behaves as a low-speed,
+     * high-torque motor physically.
      */
     public static MotorParameters small() {
         return new MotorParameters(
                 "small",
+
+                // Electrical voltage
                 300.0,
+
+                // Rated electrical power
                 10_000.0,
 
-                // Approximately 9 kW at 914 RPM.
+                // Rated mechanical torque
                 94.02,
 
-                914.0625,
-                914.0625,
+                // Rated physical RPM
+                256.0,
 
-                // Approximately 10% of input power is electrical loss.
+                // Maximum physical RPM
+                256.0,
+
+                // Winding resistance
                 0.90,
 
+                // Winding inductance
                 0.05,
 
+                // Torque constant / back-EMF constant
                 2.8207,
 
-                // Approximately 1.2x rated current.
+                // Maximum current
                 40.0,
 
+                // Rotor inertia
                 10.0,
 
-                // Gives a small no-load current.
-                1.41
+                // Mechanical friction
+                1.41,
+
+                // 256 RPM -> 914.0625 Create RPM
+                3.570556640625
         );
     }
 
     /**
      * Medium motor.
      *
-     * 500 V
-     * 15 kW electrical input
-     * approximately 13.5 kW mechanical output
-     * approximately 87,800 SU maximum
+     * Electrical:
+     *     500 V
+     *     15 kW
      *
-     * 87,800 SU / 64 = 1,371.875 RPM
+     * Physical motor:
+     *     maximum 256 RPM
+     *
+     * Create:
+     *     256 RPM * 5.35888671875
+     *     = 1,371.875 Create RPM
+     *     = approximately 87,800 SU
      */
     public static MotorParameters medium() {
         return new MotorParameters(
                 "medium",
+
+                // Electrical voltage
                 500.0,
+
+                // Rated electrical power
                 15_000.0,
 
-                // Approximately 13.5 kW at 1,372 RPM.
+                // Rated mechanical torque
                 93.97,
 
-                1371.875,
-                1371.875,
+                // Rated physical RPM
+                256.0,
 
-                // Approximately 10% of input power is electrical loss.
+                // Maximum physical RPM
+                256.0,
+
+                // Winding resistance
                 1.67,
 
+                // Winding inductance
                 0.10,
 
+                // Torque constant / back-EMF constant
                 3.1323,
 
-                // Approximately 1.2x rated current.
+                // Maximum current
                 36.0,
 
+                // Rotor inertia
                 30.0,
 
-                // Gives a small no-load current.
-                0.94
+                // Mechanical friction
+                0.94,
+
+                // 256 RPM -> 1,371.875 Create RPM
+                5.35888671875
         );
     }
 
     /**
      * Large motor.
      *
-     * 1,000 V
-     * 18 kW electrical input
-     * approximately 16.2 kW mechanical output
-     * approximately 105,300 SU maximum
+     * Electrical:
+     *     1,000 V
+     *     18 kW
      *
-     * 105,300 SU / 64 = 1,645.3125 RPM
+     * Physical motor:
+     *     maximum 256 RPM
+     *
+     * Create:
+     *     256 RPM * 6.427001953125
+     *     = 1,645.3125 Create RPM
+     *     = approximately 105,300 SU
      */
     public static MotorParameters large() {
         return new MotorParameters(
                 "large",
+
+                // Electrical voltage
                 1_000.0,
+
+                // Rated electrical power
                 18_000.0,
 
-                // Approximately 16.2 kW at 1,645 RPM.
+                // Rated mechanical torque
                 94.02,
 
-                1645.3125,
-                1645.3125,
+                // Rated physical RPM
+                256.0,
 
-                // Approximately 10% of input power is electrical loss.
+                // Maximum physical RPM
+                256.0,
+
+                // Winding resistance
                 5.56,
 
+                // Winding inductance
                 0.20,
 
+                // Torque constant / back-EMF constant
                 5.2235,
 
-                // Approximately 1.2x rated current.
+                // Maximum current
                 22.0,
 
+                // Rotor inertia
                 80.0,
 
-                // Gives a small no-load current.
-                0.78
+                // Mechanical friction
+                0.78,
+
+                // 256 RPM -> 1,645.3125 Create RPM
+                6.427001953125
         );
     }
 }
-
