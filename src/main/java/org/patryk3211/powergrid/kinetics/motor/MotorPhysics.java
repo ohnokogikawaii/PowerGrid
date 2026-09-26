@@ -603,7 +603,7 @@ public final class MotorPhysics {
         double voltageDifference =
                 Math.abs(
                         terminalVoltage
-                                - equivalentVoltage
+                                + equivalentVoltage
                 );
 
         double voltageLimitedResistance =

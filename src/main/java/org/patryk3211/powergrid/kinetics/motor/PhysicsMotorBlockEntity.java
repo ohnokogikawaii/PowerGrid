@@ -365,7 +365,7 @@ public class PhysicsMotorBlockEntity
         );
 
         motorSource.setVoltage(
-                equivalentVoltage
+                -equivalentVoltage
         );
 
         /*
