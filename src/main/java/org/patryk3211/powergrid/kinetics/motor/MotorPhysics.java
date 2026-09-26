@@ -554,19 +554,25 @@ public final class MotorPhysics {
      * Calculate the minimum equivalent resistance required to
      * prevent the motor current from exceeding maxCurrent.
      *
-     * The PowerGrid solver effectively sees:
+     * The VoltageSourceCoupling uses the source voltage with the
+     * opposite sign for the motor's internal voltage drop:
      *
-     *     I = (Vterminal - Vsource) / R
+     *     setVoltage(-Veq)
      *
-     * Therefore:
+     * Therefore the motor current is effectively:
      *
-     *     R >= |Vterminal - Vsource| / Imax
+     *     I = (Vterminal - Veq) / R
+     *
+     * where:
+     *
+     *     Veq = E + L/dt * I_previous
+     *
+     * Thus the additional resistance required to keep the current
+     * below Imax is:
+     *
+     *     R >= |Vterminal - Veq| / Imax
      *
      * The normal winding/inductive resistance is always preserved.
-     *
-     * The measured previous current is also used as a safety
-     * correction. This makes the limiter recover quickly from
-     * a solver overshoot.
      */
     public static double currentLimitedResistance(
             MotorParameters parameters,
@@ -598,12 +604,15 @@ public final class MotorPhysics {
                 );
 
         /*
-         * Resistance required from the actual voltage difference.
+         * Correct voltage available to force armature current.
+         *
+         * The back EMF and inductive voltage oppose the applied
+         * terminal voltage.
          */
         double voltageDifference =
                 Math.abs(
                         terminalVoltage
-                                + equivalentVoltage
+                                - equivalentVoltage
                 );
 
         double voltageLimitedResistance =

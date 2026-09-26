@@ -22,9 +22,19 @@ package org.patryk3211.powergrid.kinetics.motor;
  * Create RPM:
  *     physical RPM * createSpeedMultiplier()
  *
- * This allows a physically low-speed, high-torque motor to
- * generate a large amount of Create stress capacity without
- * changing the physical motor simulation.
+ * This class describes a permanent-magnet DC motor.
+ *
+ * Electrical model:
+ *
+ *     V = R * I + L * dI/dt + Ke * omega
+ *
+ * Mechanical model:
+ *
+ *     T = Kt * I
+ *
+ * For this simplified SI model:
+ *
+ *     Kt = Ke
  */
 public final class MotorParameters {
 
@@ -42,13 +52,16 @@ public final class MotorParameters {
     /**
      * Torque constant [N*m/A].
      *
-     * For the simplified permanent-magnet DC motor model,
-     * Ke has the same numerical value in V*s/rad.
+     * For a permanent-magnet DC motor in SI units,
+     * this has the same numerical value as Ke.
      */
     private final double torqueConstant;
 
     /**
      * Maximum permitted current [A].
+     *
+     * This is a protection/overload limit.
+     * It is NOT a constant current target.
      */
     private final double maxCurrent;
 
@@ -64,13 +77,6 @@ public final class MotorParameters {
 
     /**
      * Conversion from physical motor RPM to Create RPM.
-     *
-     * Example:
-     *
-     * physical RPM = 256
-     * multiplier   = 3.570556640625
-     *
-     * Create RPM = 914.0625
      */
     private final double createSpeedMultiplier;
 
@@ -149,13 +155,19 @@ public final class MotorParameters {
     /**
      * Back-EMF constant.
      *
-     * For the simplified permanent-magnet DC motor model,
-     * Ke has the same numerical value as Kt.
+     * For the permanent-magnet DC motor model:
+     *
+     *     Ke = Kt
      */
     public double backEmfConstant() {
         return torqueConstant;
     }
 
+    /**
+     * Maximum permitted current.
+     *
+     * This is NOT the normal operating current.
+     */
     public double maxCurrent() {
         return maxCurrent;
     }
@@ -169,16 +181,14 @@ public final class MotorParameters {
     }
 
     /**
-     * Returns the multiplier used when converting the physical
-     * motor RPM into Create's kinetic RPM.
+     * Conversion from physical motor RPM to Create RPM.
      */
     public double createSpeedMultiplier() {
         return createSpeedMultiplier;
     }
 
     /**
-     * Calculate the rated current from rated torque and
-     * torque constant.
+     * Calculate the current corresponding to the rated torque.
      */
     public double ratedCurrent() {
         if (torqueConstant <= 0)
@@ -198,33 +208,36 @@ public final class MotorParameters {
     /**
      * Small motor.
      *
-     * Electrical:
+     * Rated:
+     *
      *     300 V
      *     10 kW
+     *     256 RPM
      *
-     * Physical motor:
-     *     maximum 256 RPM
+     * At 256 RPM:
      *
-     * Create:
-     *     256 RPM * 3.570556640625
-     *     = 914.0625 Create RPM
-     *     = approximately 58,500 SU
+     *     omega = 26.8076 rad/s
      *
-     * The motor therefore behaves as a low-speed,
-     * high-torque motor physically.
+     * Rated torque:
+     *
+     *     T = P / omega
+     *       = approximately 373 N*m
+     *
+     * The motor is intentionally modeled as a
+     * low-speed / high-torque DC motor.
      */
     public static MotorParameters small() {
         return new MotorParameters(
                 "small",
 
-                // Electrical voltage
+                // Rated voltage
                 300.0,
 
-                // Rated electrical power
+                // Rated power
                 10_000.0,
 
-                // Rated mechanical torque
-                94.02,
+                // Rated torque
+                372.99,
 
                 // Rated physical RPM
                 256.0,
@@ -233,13 +246,13 @@ public final class MotorParameters {
                 256.0,
 
                 // Winding resistance
-                0.90,
+                0.45,
 
                 // Winding inductance
                 0.05,
 
-                // Torque constant / back-EMF constant
-                2.8207,
+                // Torque / back-EMF constant
+                10.94,
 
                 // Maximum current
                 40.0,
@@ -258,30 +271,24 @@ public final class MotorParameters {
     /**
      * Medium motor.
      *
-     * Electrical:
+     * Rated:
+     *
      *     500 V
      *     15 kW
-     *
-     * Physical motor:
-     *     maximum 256 RPM
-     *
-     * Create:
-     *     256 RPM * 5.35888671875
-     *     = 1,371.875 Create RPM
-     *     = approximately 87,800 SU
+     *     256 RPM
      */
     public static MotorParameters medium() {
         return new MotorParameters(
                 "medium",
 
-                // Electrical voltage
+                // Rated voltage
                 500.0,
 
-                // Rated electrical power
+                // Rated power
                 15_000.0,
 
-                // Rated mechanical torque
-                93.97,
+                // Rated torque
+                559.49,
 
                 // Rated physical RPM
                 256.0,
@@ -290,13 +297,13 @@ public final class MotorParameters {
                 256.0,
 
                 // Winding resistance
-                1.67,
+                0.85,
 
                 // Winding inductance
                 0.10,
 
-                // Torque constant / back-EMF constant
-                3.1323,
+                // Torque / back-EMF constant
+                17.36,
 
                 // Maximum current
                 36.0,
@@ -315,30 +322,24 @@ public final class MotorParameters {
     /**
      * Large motor.
      *
-     * Electrical:
-     *     1,000 V
+     * Rated:
+     *
+     *     1000 V
      *     18 kW
-     *
-     * Physical motor:
-     *     maximum 256 RPM
-     *
-     * Create:
-     *     256 RPM * 6.427001953125
-     *     = 1,645.3125 Create RPM
-     *     = approximately 105,300 SU
+     *     256 RPM
      */
     public static MotorParameters large() {
         return new MotorParameters(
                 "large",
 
-                // Electrical voltage
+                // Rated voltage
                 1_000.0,
 
-                // Rated electrical power
+                // Rated power
                 18_000.0,
 
-                // Rated mechanical torque
-                94.02,
+                // Rated torque
+                671.39,
 
                 // Rated physical RPM
                 256.0,
@@ -347,13 +348,13 @@ public final class MotorParameters {
                 256.0,
 
                 // Winding resistance
-                5.56,
+                2.10,
 
                 // Winding inductance
                 0.20,
 
-                // Torque constant / back-EMF constant
-                5.2235,
+                // Torque / back-EMF constant
+                34.00,
 
                 // Maximum current
                 22.0,
