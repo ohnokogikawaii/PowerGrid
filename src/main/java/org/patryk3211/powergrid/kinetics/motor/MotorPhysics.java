@@ -1,65 +1,47 @@
 package org.patryk3211.powergrid.kinetics.motor;
 
 /**
- * Mechanical simulation of a permanent-magnet DC motor.
+ * Physical simulation of a permanent-magnet DC motor.
  *
- * Electrical current is supplied by the PowerGrid circuit solver.
+ * Electrical model:
+ *
+ *     V = R * I + L * dI/dt + Ke * omega
+ *
+ * Mechanical model:
  *
  *     T = Kt * I
  *
- *     J * alpha = Tmotor - Tload - Tfriction
+ *     J * alpha =
+ *         Tmotor
+ *         - Tload
+ *         - Tfriction
  *
- *     E = Ke * omega
+ * The electrical network is represented by a Thevenin equivalent:
  *
- * The electrical circuit and the mechanical motor are intentionally
- * separated:
+ *     R_eq = R + L / dt
  *
- * PowerGrid:
+ *     V_eq = -(E + L / dt * I_previous)
  *
- *     terminal voltage
- *          +
- *          |
- *          v
- *     electrical current
- *          |
- *          v
- *     MotorPhysics
- *          |
- *          +---- electromagnetic torque
- *          |
- *          v
- *     rotor acceleration
- *          |
- *          v
- *     rotor speed
- *          |
- *          v
- *     back EMF
+ * so that the VoltageSourceCoupling produces:
  *
- * The resulting back EMF is then fed back into the electrical
- * equivalent circuit by PhysicsMotorBlockEntity.
+ *     I = (Vterminal - E - L/dt*I_previous) / R_eq
+ *
+ * The motor current is additionally limited by maxCurrent.
  */
 public final class MotorPhysics {
 
     private static final double EPSILON = 1e-9;
 
-    /**
-     * Speed below which the rotor is considered stationary.
-     */
     private static final double ZERO_SPEED = 1e-5;
 
     private MotorPhysics() {
     }
 
     /**
-     * Advance the mechanical motor state by one simulation step.
+     * Advance the mechanical state by one simulation step.
      *
-     * @param parameters motor parameters
-     * @param state motor runtime state
-     * @param current solved armature current
-     * @param appliedVoltage actual terminal voltage
-     * @param loadTorque mechanical load magnitude
-     * @param deltaTime simulation time in seconds
+     * The current supplied here is the current solved by the
+     * electrical network during the previous solver pass.
      */
     public static void update(
             MotorParameters parameters,
@@ -75,78 +57,49 @@ public final class MotorPhysics {
         if (!Double.isFinite(deltaTime) || deltaTime <= 0)
             return;
 
-        /*
-         * Prevent an unexpectedly large time step from causing
-         * unrealistic acceleration.
-         */
-        deltaTime = Math.min(
-                deltaTime,
-                0.1
-        );
+        deltaTime = Math.min(deltaTime, 0.1);
 
         current = finite(current);
         appliedVoltage = finite(appliedVoltage);
 
-        loadTorque =
-                Math.max(
-                        0,
-                        Math.abs(
-                                finite(loadTorque)
-                        )
-                );
+        loadTorque = Math.max(
+                0,
+                Math.abs(finite(loadTorque))
+        );
 
         /*
-         * Apply the motor's physical current limit.
-         *
-         * The electrical solver is also given a dynamic resistance
-         * so that the actual circuit current converges toward this
-         * limit.
-         *
-         * This clamp protects the mechanical simulation from a
-         * temporary solver overshoot.
+         * Never allow an electrical solver overshoot to produce
+         * unrealistic electromagnetic torque.
          */
         double maximumCurrent =
                 parameters.maxCurrent();
 
-        if (maximumCurrent > 0) {
-
-            current =
-                    clamp(
-                            current,
-                            -maximumCurrent,
-                            maximumCurrent
-                    );
+        if (
+                maximumCurrent > 0
+                        && Double.isFinite(maximumCurrent)
+        ) {
+            current = clamp(
+                    current,
+                    -maximumCurrent,
+                    maximumCurrent
+            );
         }
 
-        /*
-         * Previous rotor speed.
-         */
         double previousOmega =
-                finite(
-                        state.angularVelocity()
-                );
+                finite(state.angularVelocity());
 
-        /*
-         * Motor constants.
-         */
         double kt =
                 parameters.torqueConstant();
 
         double ke =
                 parameters.backEmfConstant();
 
-        /*
-         * Rotor inertia.
-         */
         double inertia =
                 Math.max(
                         parameters.inertia(),
                         EPSILON
                 );
 
-        /*
-         * Mechanical friction.
-         */
         double frictionMagnitude =
                 Math.max(
                         0,
@@ -155,19 +108,12 @@ public final class MotorPhysics {
 
         /*
          * Electromagnetic torque.
-         *
-         * T = Kt * I
          */
         double electromagneticTorque =
                 kt * current;
 
         /*
-         * Determine the direction of rotation.
-         *
-         * At normal speed the existing rotor direction is used.
-         *
-         * At standstill the electromagnetic torque determines the
-         * direction in which the rotor wants to start.
+         * Determine rotor direction.
          */
         double direction;
 
@@ -192,11 +138,7 @@ public final class MotorPhysics {
         }
 
         /*
-         * Static friction.
-         *
-         * When the motor is stopped, it must first produce enough
-         * torque to overcome both the external load and static
-         * friction.
+         * Static friction while stopped.
          */
         if (
                 Math.abs(previousOmega)
@@ -214,11 +156,6 @@ public final class MotorPhysics {
                             <= resistingTorque
             ) {
 
-                /*
-                 * Rotor remains stationary.
-                 */
-                double backEmf = 0;
-
                 state.voltage(
                         appliedVoltage
                 );
@@ -227,18 +164,12 @@ public final class MotorPhysics {
                         current
                 );
 
-                state.backEmf(
-                        backEmf
-                );
+                state.backEmf(0);
 
                 state.electromagneticTorque(
                         electromagneticTorque
                 );
 
-                /*
-                 * Keep the actual external load visible in
-                 * the state even while stopped.
-                 */
                 state.loadTorque(
                         loadTorque
                 );
@@ -273,15 +204,14 @@ public final class MotorPhysics {
         }
 
         /*
-         * Dynamic friction always opposes the direction of motion.
+         * Dynamic friction.
          */
         double frictionTorque =
                 direction
                         * frictionMagnitude;
 
         /*
-         * External mechanical load also opposes the direction
-         * of rotation.
+         * External load always opposes rotation.
          */
         double signedLoadTorque =
                 direction
@@ -289,21 +219,12 @@ public final class MotorPhysics {
 
         /*
          * Mechanical torque balance.
-         *
-         * J * alpha =
-         *
-         *     Tmotor
-         *     - Tload
-         *     - Tfriction
          */
         double netTorque =
                 electromagneticTorque
                         - signedLoadTorque
                         - frictionTorque;
 
-        /*
-         * Angular acceleration.
-         */
         double angularAcceleration =
                 netTorque / inertia;
 
@@ -316,8 +237,7 @@ public final class MotorPhysics {
                         * deltaTime;
 
         /*
-         * Prevent a single numerical step from crossing through
-         * zero into the opposite direction.
+         * Prevent numerical oscillation through zero.
          */
         if (
                 Math.abs(previousOmega)
@@ -325,19 +245,12 @@ public final class MotorPhysics {
                         &&
                         Math.signum(previousOmega)
                                 != Math.signum(newOmega)
-                        &&
-                        Math.signum(angularAcceleration)
-                                != Math.signum(previousOmega)
         ) {
-
             newOmega = 0;
         }
 
         /*
-         * Physical maximum speed.
-         *
-         * This is the actual motor RPM limit, not Create's
-         * generated kinetic RPM.
+         * Physical motor RPM limit.
          */
         double maxOmega =
                 MotorParameters.rpmToRadPerSecond(
@@ -354,19 +267,12 @@ public final class MotorPhysics {
                     );
         }
 
-        /*
-         * Store the final angular velocity.
-         */
         double omega =
                 newOmega;
 
         /*
-         * Recalculate acceleration from the actual final speed.
-         *
-         * This is important when the motor reaches its maximum
-         * physical RPM. The reported acceleration must then become
-         * zero instead of continuing to report acceleration beyond
-         * the speed limit.
+         * Once the motor reaches its physical speed limit,
+         * do not report artificial acceleration beyond it.
          */
         double actualAngularAcceleration =
                 (
@@ -377,8 +283,6 @@ public final class MotorPhysics {
 
         /*
          * Back EMF.
-         *
-         * E = Ke * omega
          */
         double backEmf =
                 ke * omega;
@@ -399,8 +303,6 @@ public final class MotorPhysics {
 
         /*
          * Electromagnetic mechanical power.
-         *
-         * P = T * omega
          */
         double mechanicalPower =
                 electromagneticTorque
@@ -408,8 +310,6 @@ public final class MotorPhysics {
 
         /*
          * Copper loss.
-         *
-         * P_loss = I^2 * R
          */
         double copperLoss =
                 current
@@ -417,7 +317,7 @@ public final class MotorPhysics {
                         * parameters.resistance();
 
         /*
-         * Store complete state.
+         * Store state.
          */
         state.voltage(
                 appliedVoltage
@@ -473,7 +373,7 @@ public final class MotorPhysics {
     }
 
     /**
-     * Back EMF from rotor speed.
+     * Calculate back EMF.
      */
     public static double backEmf(
             MotorParameters parameters,
@@ -484,7 +384,7 @@ public final class MotorPhysics {
     }
 
     /**
-     * Electromagnetic torque from current.
+     * Calculate electromagnetic torque.
      */
     public static double torque(
             MotorParameters parameters,
@@ -493,8 +393,10 @@ public final class MotorPhysics {
         double maximumCurrent =
                 parameters.maxCurrent();
 
-        if (maximumCurrent > 0) {
-
+        if (
+                maximumCurrent > 0
+                        && Double.isFinite(maximumCurrent)
+        ) {
             current =
                     clamp(
                             current,
@@ -508,8 +410,7 @@ public final class MotorPhysics {
     }
 
     /**
-     * Equivalent resistance for the next backward-Euler
-     * electrical step.
+     * Backward-Euler equivalent resistance.
      *
      *     R_eq = R + L/dt
      */
@@ -517,62 +418,78 @@ public final class MotorPhysics {
             MotorParameters parameters,
             double deltaTime
     ) {
-        if (deltaTime <= 0)
-            return parameters.resistance();
+        if (
+                deltaTime <= 0
+                        || !Double.isFinite(deltaTime)
+        ) {
+            return Math.max(
+                    parameters.resistance(),
+                    EPSILON
+            );
+        }
 
-        return parameters.resistance()
-                + parameters.inductance()
-                / deltaTime;
+        return Math.max(
+                parameters.resistance()
+                        + parameters.inductance()
+                        / deltaTime,
+                EPSILON
+        );
     }
 
     /**
-     * Equivalent source voltage for the next backward-Euler
-     * electrical step.
+     * Backward-Euler equivalent internal voltage.
      *
-     *     V = E + R*I + L*dI/dt
+     * The returned value is the magnitude of the voltage that
+     * opposes the external terminal voltage.
      *
-     * becomes
-     *
-     *     Vsource =
-     *         E + L/dt * I_previous
+     * PhysicsMotorBlockEntity applies this value to
+     * VoltageSourceCoupling with a negative sign.
      */
     public static double equivalentVoltage(
             MotorParameters parameters,
             MotorState state,
             double deltaTime
     ) {
-        if (deltaTime <= 0)
-            return state.backEmf();
+        if (
+                deltaTime <= 0
+                        || !Double.isFinite(deltaTime)
+        ) {
+            return finite(
+                    state.backEmf()
+            );
+        }
 
-        return state.backEmf()
-                + parameters.inductance()
-                / deltaTime
-                * state.current();
+        double previousCurrent =
+                finite(
+                        state.current()
+                );
+
+        double inductiveVoltage =
+                parameters.inductance()
+                        / deltaTime
+                        * previousCurrent;
+
+        return finite(
+                state.backEmf()
+                        + inductiveVoltage
+        );
     }
 
     /**
-     * Calculate the minimum equivalent resistance required to
-     * prevent the motor current from exceeding maxCurrent.
+     * Calculate the minimum resistance required to keep the
+     * electrical current at or below maxCurrent.
      *
-     * The VoltageSourceCoupling uses the source voltage with the
-     * opposite sign for the motor's internal voltage drop:
-     *
-     *     setVoltage(-Veq)
-     *
-     * Therefore the motor current is effectively:
+     * This method is deliberately based on the voltage that is
+     * actually available across the motor equivalent.
      *
      *     I = (Vterminal - Veq) / R
      *
-     * where:
-     *
-     *     Veq = E + L/dt * I_previous
-     *
-     * Thus the additional resistance required to keep the current
-     * below Imax is:
+     * Therefore:
      *
      *     R >= |Vterminal - Veq| / Imax
      *
-     * The normal winding/inductive resistance is always preserved.
+     * A small safety margin is added so the nonlinear electrical
+     * solver does not repeatedly cross the current limit.
      */
     public static double currentLimitedResistance(
             MotorParameters parameters,
@@ -588,7 +505,10 @@ public final class MotorPhysics {
                 maximumCurrent <= 0
                         || !Double.isFinite(maximumCurrent)
         ) {
-            return baseResistance;
+            return Math.max(
+                    baseResistance,
+                    parameters.resistance()
+            );
         }
 
         terminalVoltage =
@@ -604,10 +524,7 @@ public final class MotorPhysics {
                 );
 
         /*
-         * Correct voltage available to force armature current.
-         *
-         * The back EMF and inductive voltage oppose the applied
-         * terminal voltage.
+         * Voltage actually available to force armature current.
          */
         double voltageDifference =
                 Math.abs(
@@ -615,39 +532,52 @@ public final class MotorPhysics {
                                 - equivalentVoltage
                 );
 
-        double voltageLimitedResistance =
-                voltageDifference
-                        / maximumCurrent;
-
         /*
-         * If the previous solver result was already above the
-         * physical current limit, increase the resistance by the
-         * same ratio.
+         * Add a 2% margin to avoid solver oscillation directly
+         * around the current limit.
          */
-        double measuredCurrent =
-                Math.abs(
-                        state.current()
+        double targetCurrent =
+                maximumCurrent * 0.98;
+
+        double requiredResistance =
+                voltageDifference
+                        / Math.max(
+                        targetCurrent,
+                        EPSILON
                 );
 
-        double currentLimitedResistance =
-                baseResistance;
+        /*
+         * If the last solved current was already above the limit,
+         * make the resistance more aggressive.
+         */
+        double previousCurrent =
+                Math.abs(
+                        finite(
+                                state.current()
+                        )
+                );
 
-        if (measuredCurrent > maximumCurrent) {
+        if (
+                previousCurrent
+                        > maximumCurrent
+        ) {
 
-            currentLimitedResistance =
-                    baseResistance
-                            * (
-                            measuredCurrent
-                                    / maximumCurrent
+            double correction =
+                    previousCurrent
+                            / maximumCurrent;
+
+            requiredResistance =
+                    Math.max(
+                            requiredResistance,
+                            baseResistance
+                                    * correction
+                                    * 1.10
                     );
         }
 
         return Math.max(
                 baseResistance,
-                Math.max(
-                        voltageLimitedResistance,
-                        currentLimitedResistance
-                )
+                requiredResistance
         );
     }
 

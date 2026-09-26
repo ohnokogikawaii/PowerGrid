@@ -22,17 +22,12 @@ public class PhysicsMotorBlockEntity
         implements IElectricEntity {
 
     /**
-     * Simulation time per electrical/mechanical update.
-     *
-     * 20 ticks per second = 0.05 seconds.
+     * 20 Minecraft ticks per second.
      */
     protected static final double DELTA_TIME = 0.05;
 
     /**
-     * Createに現在出力している回転速度。
-     *
-     * MotorState.rpm() は物理シミュレーション上のRPM、
-     * generatedSpeed はCreateへ実際に渡している速度。
+     * Createに出力している速度。
      */
     protected float generatedSpeed = 0;
 
@@ -45,25 +40,12 @@ public class PhysicsMotorBlockEntity
     protected ThermalBehaviour thermalBehaviour;
 
     /**
-     * The Thevenin-equivalent electrical model of the motor.
-     *
-     * terminal 0 = positive
-     * terminal 1 = negative
-     *
-     * Resistance represents:
-     *
-     *     winding resistance
-     *     + inductive equivalent resistance
-     *     + dynamic current limiting resistance
-     *
-     * Voltage represents the motor's back EMF and the
-     * backward-Euler inductive source term.
+     * Thevenin equivalent of the motor winding.
      */
     protected VoltageSourceCoupling motorSource;
 
     /**
-     * External mechanical load applied by the Create kinetic
-     * network.
+     * Mechanical load supplied by Create.
      */
     protected double externalLoadTorque;
 
@@ -75,16 +57,12 @@ public class PhysicsMotorBlockEntity
         super(type, pos, state);
     }
 
-    /**
-     * Get the parameters of the motor represented by this block.
-     */
     protected MotorParameters parameters() {
 
         if (
                 getBlockState().getBlock()
                         instanceof PhysicsMotorBlock block
         ) {
-
             return block.getMotorParameters();
         }
 
@@ -129,16 +107,13 @@ public class PhysicsMotorBlockEntity
                         dissipation
                 );
 
-        if (thermalBehaviour != null)
+        if (thermalBehaviour != null) {
             behaviours.add(
                     thermalBehaviour
             );
+        }
     }
 
-    /**
-     * PhysicsMotorBlockEntity does not extend ElectricBlockEntity,
-     * so the electrical update must be called explicitly here.
-     */
     @Override
     public void tick() {
 
@@ -148,7 +123,6 @@ public class PhysicsMotorBlockEntity
                 !level.isClientSide
                         || isVirtual()
         ) {
-
             electricalTick();
         }
 
@@ -161,7 +135,6 @@ public class PhysicsMotorBlockEntity
         super.remove();
 
         if (electricBehaviour != null) {
-
             electricBehaviour.remove();
         }
     }
@@ -173,38 +146,27 @@ public class PhysicsMotorBlockEntity
         builder.setTerminalCount(2);
 
         /*
-         * Permanent-magnet DC motor equivalent circuit:
+         * The motor is represented as:
          *
-         *       R_eq
-         *  + ---/\/\/---[ E_back ]--- -
+         *     R_eq + back EMF
          *
-         * terminal 0 -> terminal 1
-         *
-         * The electrical resistance is updated every simulation
-         * step to include:
-         *
-         *     winding resistance
-         *     inductive equivalent
-         *     current limiting
+         * The inductive term is converted into an equivalent
+         * resistance/source using backward Euler in MotorPhysics.
          */
         motorSource =
                 builder.addInternalNode(
                         VoltageSourceCoupling.class,
                         builder.terminalNode(0),
                         builder.terminalNode(1),
-                        (float) parameters().resistance()
+                        (float) Math.max(
+                                parameters().resistance(),
+                                0.001
+                        )
                 );
 
         motorSource.setVoltage(0);
     }
 
-    /**
-     * Update the mechanical load from the Create kinetic network.
-     *
-     * Create exposes stress rather than physical torque, so the
-     * stress ratio is converted into a fraction of the motor's
-     * rated torque.
-     */
     @Override
     public void updateFromNetwork(
             float maxStress,
@@ -243,18 +205,7 @@ public class PhysicsMotorBlockEntity
     }
 
     /**
-     * Perform one electrical/mechanical simulation step.
-     *
-     * Order:
-     *
-     * 1. Read the current solved by PowerGrid.
-     * 2. Read terminal voltage.
-     * 3. Advance the mechanical motor model.
-     * 4. Calculate back EMF.
-     * 5. Build the next electrical equivalent.
-     * 6. Increase equivalent resistance when current limiting
-     *    is required.
-     * 7. Feed the equivalent back into PowerGrid.
+     * Perform one complete motor update.
      */
     public void electricalTick() {
 
@@ -272,16 +223,41 @@ public class PhysicsMotorBlockEntity
                 parameters();
 
         /*
-         * Current solved by the PowerGrid electrical network.
+         * Read the current solved by the previous electrical
+         * network iteration.
+         *
+         * Never feed an absurd solver value directly into the
+         * mechanical model.
          */
-        double current =
+        double solvedCurrent =
                 motorSource.getCurrent();
 
-        if (!Double.isFinite(current))
-            current = 0;
+        if (!Double.isFinite(solvedCurrent)) {
+            solvedCurrent = 0;
+        }
 
         /*
-         * Voltage across the external motor terminals.
+         * Clamp the current used by the mechanical model.
+         *
+         * This does NOT replace electrical current limiting.
+         * It only prevents a solver instability from generating
+         * hundreds of Nm of artificial torque.
+         */
+        double current =
+                solvedCurrent;
+
+        if (parameters.maxCurrent() > 0) {
+
+            current =
+                    MotorPhysicsClamp(
+                            current,
+                            -parameters.maxCurrent(),
+                            parameters.maxCurrent()
+                    );
+        }
+
+        /*
+         * Actual external terminal voltage.
          */
         double terminalVoltage =
                 motorSource.getPositive().getVoltage()
@@ -291,15 +267,15 @@ public class PhysicsMotorBlockEntity
                                 : 0
                 );
 
-        if (!Double.isFinite(terminalVoltage))
+        if (!Double.isFinite(terminalVoltage)) {
             terminalVoltage = 0;
+        }
 
         /*
-         * Advance the mechanical model.
+         * Advance mechanical state.
          *
-         * MotorPhysics internally applies maxCurrent so that a
-         * temporary electrical solver overshoot cannot create
-         * impossible electromagnetic torque.
+         * The state current is the bounded physical current,
+         * rather than a potentially unstable raw solver value.
          */
         MotorPhysics.update(
                 parameters,
@@ -311,15 +287,10 @@ public class PhysicsMotorBlockEntity
         );
 
         /*
-         * Build the equivalent electrical model for the next
+         * Construct the electrical equivalent for the NEXT
          * solver iteration.
-         *
-         *     R_eq = R + L/dt
-         *
-         *     V_eq =
-         *         E + L/dt * I_previous
          */
-        double equivalentResistance =
+        double baseResistance =
                 MotorPhysics.equivalentResistance(
                         parameters,
                         DELTA_TIME
@@ -333,35 +304,42 @@ public class PhysicsMotorBlockEntity
                 );
 
         /*
-         * Apply the actual motor current limit.
-         *
-         * The resistance is increased only when necessary.
-         *
-         * At low current:
-         *
-         *     normal winding + inductive resistance
-         *
-         * At excessive current:
-         *
-         *     additional virtual resistance
-         *
-         * This preserves the normal motor characteristics while
-         * preventing excessive armature current.
+         * Determine the resistance necessary to keep the
+         * electrical current below maxCurrent.
          */
-        equivalentResistance =
+        double limitedResistance =
                 MotorPhysics.currentLimitedResistance(
                         parameters,
                         motorState,
                         terminalVoltage,
                         equivalentVoltage,
-                        equivalentResistance
+                        baseResistance
                 );
 
+        if (
+                !Double.isFinite(limitedResistance)
+                        || limitedResistance <= 0
+        ) {
+            limitedResistance =
+                    Math.max(
+                            baseResistance,
+                            0.001
+                    );
+        }
+
         /*
-         * Apply the electrical equivalent for the next solver pass.
+         * Update the electrical equivalent.
+         *
+         * VoltageSourceCoupling implements:
+         *
+         *     I =
+         *       (Vterminal + Vsource) / R
+         *
+         * Therefore the motor's internal opposing voltage must
+         * be supplied with a NEGATIVE sign.
          */
         motorSource.setResistance(
-                (float) equivalentResistance
+                (float) limitedResistance
         );
 
         motorSource.setVoltage(
@@ -369,7 +347,7 @@ public class PhysicsMotorBlockEntity
         );
 
         /*
-         * Feed actual copper loss into the thermal system.
+         * Thermal loss.
          */
         if (thermalBehaviour != null) {
 
@@ -380,7 +358,6 @@ public class PhysicsMotorBlockEntity
                     Double.isFinite(copperLoss)
                             && copperLoss > 0
             ) {
-
                 thermalBehaviour.applyTickPower(
                         copperLoss
                 );
@@ -388,13 +365,33 @@ public class PhysicsMotorBlockEntity
         }
 
         /*
-         * Update Create's generated kinetic speed.
+         * Transfer physical RPM to Create.
          */
         updateMotorSpeed();
     }
 
     /**
-     * Transfer the physical motor RPM into Create's kinetic system.
+     * Local finite clamp.
+     */
+    private static double MotorPhysicsClamp(
+            double value,
+            double min,
+            double max
+    ) {
+        if (!Double.isFinite(value))
+            return 0;
+
+        return Math.max(
+                min,
+                Math.min(
+                        max,
+                        value
+                )
+        );
+    }
+
+    /**
+     * Transfer physical motor RPM to Create.
      */
     protected void updateMotorSpeed() {
 
@@ -404,15 +401,6 @@ public class PhysicsMotorBlockEntity
         if (!Double.isFinite(rpm))
             rpm = 0;
 
-        /*
-         * Limit both:
-         *
-         * 1. the motor's physical maximum RPM
-         * 2. Create's global maximum RPM
-         *
-         * The motor parameters therefore remain the physical
-         * authority.
-         */
         double allowed =
                 Math.min(
                         parameters().maxRPM(),
@@ -432,15 +420,6 @@ public class PhysicsMotorBlockEntity
                 rpm
         );
 
-        /*
-         * Convert physical motor RPM into Create RPM.
-         *
-         * Example:
-         *
-         *     physical 256 RPM
-         *     × 3.570556640625
-         *     = 914.0625 Create RPM
-         */
         double createRPM =
                 rpm
                         * parameters()
@@ -524,10 +503,6 @@ public class PhysicsMotorBlockEntity
         return motorState.copperLoss();
     }
 
-    /**
-     * 0.0 = stopped
-     * 1.0 = maximum physical RPM
-     */
     public float getSoundRPMFactor() {
 
         double maximum =
@@ -544,11 +519,6 @@ public class PhysicsMotorBlockEntity
         );
     }
 
-    /**
-     * 1.0 = rated current.
-     *
-     * Values above 1.0 represent overload/inrush conditions.
-     */
     public float getSoundLoadFactor() {
 
         double ratedCurrent =
@@ -661,10 +631,6 @@ public class PhysicsMotorBlockEntity
                 )
         );
 
-        /*
-         * Rebuild Create's generated rotation from the saved
-         * physical motor speed.
-         */
         if (
                 level != null
                         && !level.isClientSide
