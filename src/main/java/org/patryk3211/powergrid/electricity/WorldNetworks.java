@@ -86,8 +86,15 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
 
     void completeLoad() {
         if(nbt != null) {
+            PowerGrid.LOGGER.info(
+                    "[TransmissionLineRepair] completeLoad: restoring WorldNetworks SavedData"
+            );
             readNbt(nbt);
             nbt = null;
+        } else {
+            PowerGrid.LOGGER.info(
+                    "[TransmissionLineRepair] completeLoad: no deferred NBT present"
+            );
         }
     }
 
@@ -109,10 +116,21 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
 
     private final Set<TransmissionLinePart> pendingTransmissionLineRepair =
             Collections.newSetFromMap(new IdentityHashMap<>());
+    /** Temporary diagnostics for transmission-line restoration after world load. */
+    private final Map<TransmissionLinePart, Integer> transmissionLineRepairAttempts =
+            new IdentityHashMap<>();
 
     public void queueTransmissionLineRepair(TransmissionLinePart part) {
         if (part != null) {
             pendingTransmissionLineRepair.add(part);
+            transmissionLineRepairAttempts.putIfAbsent(part, 0);
+            PowerGrid.LOGGER.info(
+                    "[TransmissionLineRepair] QUEUED part={} endpoint1={} endpoint2={} line={}",
+                    System.identityHashCode(part),
+                    part.getEndpoint1(),
+                    part.getEndpoint2(),
+                    part.getLine()
+            );
         }
     }
 
@@ -252,6 +270,12 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
             return true;
         });
 
+        if (!pendingTransmissionLineRepair.isEmpty()) {
+            PowerGrid.LOGGER.info(
+                    "[TransmissionLineRepair] preTick: pendingParts={}",
+                    pendingTransmissionLineRepair.size()
+            );
+        }
         repairPendingTransmissionLines();
 
         JunctionWireEndpoint.processNewNodes(world);
@@ -715,16 +739,62 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
     }
 
     private boolean makeTransmissionLine(TransmissionLinePart linePart) {
-        if(linePart.getLine() != null)
+        if(linePart.getLine() != null) {
+            PowerGrid.LOGGER.info(
+                    "[TransmissionLineRepair] makeTransmissionLine: part={} already has line={}",
+                    System.identityHashCode(linePart),
+                    linePart.getLine()
+            );
             return true;
+        }
 
         var endpoint1 = linePart.getEndpoint1();
         var endpoint2 = linePart.getEndpoint2();
 
+        PowerGrid.LOGGER.info(
+                "[TransmissionLineRepair] makeTransmissionLine: part={} endpoint1={} endpoint2={}",
+                System.identityHashCode(linePart),
+                endpoint1,
+                endpoint2
+        );
+
+        if(endpoint1 == null || endpoint2 == null) {
+            PowerGrid.LOGGER.warn(
+                    "[TransmissionLineRepair] makeTransmissionLine FAILED: null endpoint part={} endpoint1={} endpoint2={}",
+                    System.identityHashCode(linePart),
+                    endpoint1,
+                    endpoint2
+            );
+            return false;
+        }
+
+        var node1Before = endpoint1.getNode(world);
+        var node2Before = endpoint2.getNode(world);
+        PowerGrid.LOGGER.info(
+                "[TransmissionLineRepair] makeTransmissionLine: nodes before prepare part={} node1={} node2={} same={}",
+                System.identityHashCode(linePart),
+                node1Before,
+                node2Before,
+                node1Before == node2Before
+        );
+
         // This method needs to ensure proper ordering of segments in the transmission line.
         var network = prepareForConnection(endpoint1, endpoint2);
-        if(network == null)
+        if(network == null) {
+            PowerGrid.LOGGER.warn(
+                    "[TransmissionLineRepair] makeTransmissionLine FAILED: prepareForConnection returned null part={} node1={} node2={}",
+                    System.identityHashCode(linePart),
+                    node1Before,
+                    node2Before
+            );
             return false;
+        }
+
+        PowerGrid.LOGGER.info(
+                "[TransmissionLineRepair] makeTransmissionLine: prepareForConnection SUCCESS part={} network={} ",
+                System.identityHashCode(linePart),
+                network
+        );
 
         if(ModdedConfigs.logsEnabled())
             PowerGrid.LOGGER.debug("Creating a transmission line for {}", linePart);
@@ -806,6 +876,13 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
         }
 
         setDirty();
+        PowerGrid.LOGGER.info(
+                "[TransmissionLineRepair] makeTransmissionLine SUCCESS part={} line={} node1={} node2={}",
+                System.identityHashCode(linePart),
+                linePart.getLine(),
+                linePart.getNode1(),
+                linePart.getNode2()
+        );
         return true;
     }
 
@@ -881,6 +958,12 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
     protected void readNbt(CompoundTag nbt) {
         var partList = nbt.getList("Parts", Tag.TAG_COMPOUND);
 
+        PowerGrid.LOGGER.info(
+                "[TransmissionLineRepair] readNbt: Parts={} linePartsBefore={}",
+                partList.size(),
+                lineParts.size()
+        );
+
         /*
          * TransmissionLine itself is runtime state and is not serialized.
          * The saved TransmissionLinePart objects therefore have to be
@@ -891,14 +974,49 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
          * are available. Queue every restored part and let the normal repair
          * pass retry until both endpoints are available.
          */
+        int restored = 0;
+        int queued = 0;
+
         for(var entryGeneric : partList) {
             var partEntry = (CompoundTag) entryGeneric;
             var part = TransmissionLinePart.uniquePart(partEntry, this);
+            restored++;
 
-            if(part != null && part.getLine() == null) {
+            if(part == null) {
+                PowerGrid.LOGGER.warn(
+                        "[TransmissionLineRepair] readNbt: uniquePart returned null for entry {}",
+                        restored
+                );
+                continue;
+            }
+
+            PowerGrid.LOGGER.info(
+                    "[TransmissionLineRepair] RESTORED part={} endpoint1={} endpoint2={} line={} linePartsNow={}",
+                    System.identityHashCode(part),
+                    part.getEndpoint1(),
+                    part.getEndpoint2(),
+                    part.getLine(),
+                    lineParts.size()
+            );
+
+            if(part.getLine() == null) {
                 queueTransmissionLineRepair(part);
+                queued++;
+            } else {
+                PowerGrid.LOGGER.info(
+                        "[TransmissionLineRepair] part={} already has line={}, no repair needed",
+                        System.identityHashCode(part),
+                        part.getLine()
+                );
             }
         }
+
+        PowerGrid.LOGGER.info(
+                "[TransmissionLineRepair] readNbt complete: restored={} queued={} pending={}",
+                restored,
+                queued,
+                pendingTransmissionLineRepair.size()
+        );
     }
 
     public void nodeHolderUnloaded(@NotNull OwnedFloatingNode ownedNode) {
@@ -1096,15 +1214,39 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                 var lines = List.copyOf(globalGraph.getConnectedLines(oldNode));
                 for (var line : lines) {
                     if (line.getNode1() == oldNode) {
+                        var otherNode = line.getNode2();
+
+                        globalGraph.disconnect(oldNode, otherNode, line);
+
                         line.setNode1(newNode);
+
+                        globalGraph.connect(newNode, otherNode, line);
+
                         if(ModdedConfigs.logsEnabled())
-                            PowerGrid.LOGGER.debug("Line {} has had its node migrated", line);
+                            PowerGrid.LOGGER.debug(
+                                    "Line {} migrated node1: {} -> {}",
+                                    line, oldNode, newNode
+                            );
+
                     } else if (line.getNode2() == oldNode) {
+                        var otherNode = line.getNode1();
+
+                        globalGraph.disconnect(otherNode, oldNode, line);
+
                         line.setNode2(newNode);
+
+                        globalGraph.connect(otherNode, newNode, line);
+
                         if(ModdedConfigs.logsEnabled())
-                            PowerGrid.LOGGER.debug("Line {} has had its node migrated", line);
+                            PowerGrid.LOGGER.debug(
+                                    "Line {} migrated node2: {} -> {}",
+                                    line, oldNode, newNode
+                            );
+
                     } else {
-                        PowerGrid.LOGGER.warn("Line connected to old node in graph, but doesn't have it as an endpoint?");
+                        PowerGrid.LOGGER.warn(
+                                "Line connected to old node in graph, but doesn't have it as an endpoint?"
+                        );
                     }
                 }
                 unified.removeNode(oldNode);
@@ -1424,26 +1566,66 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
             return;
         }
 
+        PowerGrid.LOGGER.info(
+                "[TransmissionLineRepair] repair pass START pending={}",
+                pendingTransmissionLineRepair.size()
+        );
+
         var iterator = pendingTransmissionLineRepair.iterator();
 
         while (iterator.hasNext()) {
             var part = iterator.next();
 
             if (part == null) {
+                PowerGrid.LOGGER.warn(
+                        "[TransmissionLineRepair] NULL part found in pending set; removing"
+                );
                 iterator.remove();
                 continue;
             }
 
+            int attempt = transmissionLineRepairAttempts.merge(part, 1, Integer::sum);
+
+            PowerGrid.LOGGER.info(
+                    "[TransmissionLineRepair] ATTEMPT #{} part={} pending={} endpoint1={} endpoint2={} line={}",
+                    attempt,
+                    System.identityHashCode(part),
+                    pendingTransmissionLineRepair.size(),
+                    part.getEndpoint1(),
+                    part.getEndpoint2(),
+                    part.getLine()
+            );
+
             if (part.getLine() != null) {
+                PowerGrid.LOGGER.info(
+                        "[TransmissionLineRepair] part={} already repaired before attempt; removing from queue",
+                        System.identityHashCode(part)
+                );
                 iterator.remove();
+                transmissionLineRepairAttempts.remove(part);
                 continue;
             }
 
             try {
                 part.refreshEndpointNodes();
 
+                PowerGrid.LOGGER.info(
+                        "[TransmissionLineRepair] part={} after refresh: endpoint1={} endpoint2={} node1={} node2={} line={}",
+                        System.identityHashCode(part),
+                        part.getEndpoint1(),
+                        part.getEndpoint2(),
+                        part.getNode1(),
+                        part.getNode2(),
+                        part.getLine()
+                );
+
                 if (part.getLine() != null) {
+                    PowerGrid.LOGGER.info(
+                            "[TransmissionLineRepair] part={} refreshEndpointNodes() repaired the line",
+                            System.identityHashCode(part)
+                    );
                     iterator.remove();
+                    transmissionLineRepairAttempts.remove(part);
                     continue;
                 }
 
@@ -1451,26 +1633,68 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                 var endpoint2 = part.getEndpoint2();
 
                 if (endpoint1 == null || endpoint2 == null) {
+                    PowerGrid.LOGGER.warn(
+                            "[TransmissionLineRepair] WAIT part={} because endpoint is null: endpoint1={} endpoint2={}",
+                            System.identityHashCode(part),
+                            endpoint1,
+                            endpoint2
+                    );
                     continue;
                 }
 
                 var node1 = endpoint1.getNode(world);
                 var node2 = endpoint2.getNode(world);
 
+                PowerGrid.LOGGER.info(
+                        "[TransmissionLineRepair] part={} resolved nodes: node1={} node2={} same={}",
+                        System.identityHashCode(part),
+                        node1,
+                        node2,
+                        node1 == node2
+                );
+
                 if (node1 == null || node2 == null) {
+                    PowerGrid.LOGGER.warn(
+                            "[TransmissionLineRepair] WAIT part={} because node is null: node1={} node2={}",
+                            System.identityHashCode(part),
+                            node1,
+                            node2
+                    );
                     continue;
                 }
 
-                if (makeTransmissionLine(part)) {
+                boolean repaired = makeTransmissionLine(part);
+
+                PowerGrid.LOGGER.info(
+                        "[TransmissionLineRepair] makeTransmissionLine result: part={} success={} line={}",
+                        System.identityHashCode(part),
+                        repaired,
+                        part.getLine()
+                );
+
+                if (repaired) {
                     iterator.remove();
+                    transmissionLineRepairAttempts.remove(part);
+                    PowerGrid.LOGGER.info(
+                            "[TransmissionLineRepair] COMPLETE part={} remainingPending={}",
+                            System.identityHashCode(part),
+                            pendingTransmissionLineRepair.size()
+                    );
                 }
             } catch (Exception e) {
-                PowerGrid.LOGGER.debug(
-                        "Failed to repair transmission line part {}, will retry",
-                        part,
+                PowerGrid.LOGGER.error(
+                        "[TransmissionLineRepair] EXCEPTION repairing part={} attempt={}; will retry",
+                        System.identityHashCode(part),
+                        attempt,
                         e
                 );
             }
         }
+
+        PowerGrid.LOGGER.info(
+                "[TransmissionLineRepair] repair pass END pending={}",
+                pendingTransmissionLineRepair.size()
+        );
     }
+
 }
