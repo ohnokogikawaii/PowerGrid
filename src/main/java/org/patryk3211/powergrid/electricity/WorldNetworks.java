@@ -880,9 +880,24 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
 
     protected void readNbt(CompoundTag nbt) {
         var partList = nbt.getList("Parts", Tag.TAG_COMPOUND);
+
+        /*
+         * TransmissionLine itself is runtime state and is not serialized.
+         * The saved TransmissionLinePart objects therefore have to be
+         * resolved again after the world has loaded.
+         *
+         * Do not wait for the wire entity to be grabbed: a server restart
+         * can restore the SavedData before the corresponding entities/chunks
+         * are available. Queue every restored part and let the normal repair
+         * pass retry until both endpoints are available.
+         */
         for(var entryGeneric : partList) {
             var partEntry = (CompoundTag) entryGeneric;
-            TransmissionLinePart.uniquePart(partEntry, this);
+            var part = TransmissionLinePart.uniquePart(partEntry, this);
+
+            if(part != null && part.getLine() == null) {
+                queueTransmissionLineRepair(part);
+            }
         }
     }
 
