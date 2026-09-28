@@ -327,11 +327,23 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
 
     public void postTick() {
         if(world instanceof ServerLevel serverWorld) {
-            // Check for line parts existence
+            // Check for line parts existence.
+            //
+            // IMPORTANT:
+            // A missing entity does NOT mean that the wire was destroyed.
+            //
+            // During world/server reload a BaseWireEntity may temporarily be
+            // unavailable even though its TransmissionLinePart is still valid.
+            // Therefore we must never remove a line merely because getEntity()
+            // returns null.
             var checkIter = checkForExistence.entrySet().iterator();
+
             while(checkIter.hasNext()) {
                 var entry = checkIter.next();
                 var chunk = entry.getKey();
+
+                // The chunk isn't loaded yet.
+                // Keep the check pending until it is loaded.
                 if(!world.hasChunk(chunk.x, chunk.z)) {
                     if(expectedInChunks.containsKey(chunk)) {
                         expectedInChunks.get(chunk).addAll(entry.getValue().entities);
@@ -339,122 +351,180 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                         entry.getValue().ticks = 0;
                         expectedInChunks.put(chunk, entry.getValue());
                     }
+                    checkIter.remove();
                     continue;
                 }
-                var remove = entry.getValue().ticks++ >= 10;
+
                 var entityIter = entry.getValue().entities.iterator();
+
                 while(entityIter.hasNext()) {
                     var id = entityIter.next();
-                    if(id.getEntity(serverWorld) == null) {
-                        if(remove) {
-                            // Doesn't exist even after chunk has been loaded.
-                            var part = lineParts.get(id);
-                            if (part == null)
-                                continue;
-                            // Destroy line
-                            var line = part.getLine();
-                            if(line != null) {
-                                line.remove();
-                            } else {
-                                part.remove();
-                            }
-                        }
-                    } else {
-                        entityIter.remove();
+
+                    BaseWireEntity entity = id.getEntity(serverWorld);
+
+                    if(entity == null) {
+                        /*
+                         * DO NOT remove the TransmissionLine here.
+                         *
+                         * The entity may simply not have been restored/loaded
+                         * yet. Actual destruction is handled explicitly from
+                         * BaseWireEntity.remove(RemovalReason).
+                         *
+                         * Keep the PartId in the check set so that a later
+                         * chunk/entity load can resolve it.
+                         */
+                        continue;
                     }
+
+                    // Entity exists again, so there is nothing to check.
+                    entityIter.remove();
                 }
-                if(remove || entry.getValue().entities.isEmpty()) {
+
+                /*
+                 * Only remove the bookkeeping entry when every entity that was
+                 * being checked has been found.
+                 *
+                 * Missing entities are intentionally kept pending.
+                 */
+                if(entry.getValue().entities.isEmpty()) {
                     checkIter.remove();
                 }
             }
+
             // Synchronize state with clients
             if(syncTicks % 5 == 0) {
                 syncStates.clear();
+
                 var trackerEntryIter = trackers.entrySet().iterator();
                 while(trackerEntryIter.hasNext()) {
                     var entry = trackerEntryIter.next();
                     var playerIter = entry.getValue().iterator();
+
                     while(playerIter.hasNext()) {
                         var player = playerIter.next();
+
                         if(player.isRemoved()) {
                             playerIter.remove();
                             continue;
                         }
+
                         var endpoint = entry.getKey();
+
                         if(endpoint instanceof BlockWireEndpoint bwe) {
                             var eb = bwe.getElectricBehaviour(world);
                             if (eb == null)
                                 continue;
+
                             var ebPos = eb.getPos();
-                            var syncState = new SyncState((int) (Math.sqrt(player.distanceToSqr(ebPos.getX(), ebPos.getY(), ebPos.getZ())) / 24 + 1));
+                            var syncState = new SyncState(
+                                    (int) (
+                                            Math.sqrt(
+                                                    player.distanceToSqr(
+                                                            ebPos.getX(),
+                                                            ebPos.getY(),
+                                                            ebPos.getZ()
+                                                    )
+                                            ) / 24 + 1
+                                    )
+                            );
+
                             if(eb.blockEntity instanceof IMultipartSync multipart) {
                                 multipart.forSync(sync -> {
                                     if(sync == null)
                                         return;
-                                    syncStates.computeIfAbsent(player, $ -> new HashMap<>())
+
+                                    syncStates
+                                            .computeIfAbsent(player, $ -> new HashMap<>())
                                             .put(sync, syncState);
                                 });
                             } else {
-                                syncStates.computeIfAbsent(player, $ -> new HashMap<>())
+                                syncStates
+                                        .computeIfAbsent(player, $ -> new HashMap<>())
                                         .put(eb, syncState);
                             }
+
                         } else if(endpoint instanceof JunctionWireEndpoint je) {
                             var syncEntry = je.makeSyncEntry(world);
                             var jePos = je.getExactPosition(world);
-                            if(syncEntry != null)
-                                syncStates.computeIfAbsent(player, $ -> new HashMap<>())
-                                        .put(syncEntry, new SyncState((int) (Math.sqrt(player.distanceToSqr(jePos)) / 24 + 1)));
+
+                            if(syncEntry != null) {
+                                syncStates
+                                        .computeIfAbsent(player, $ -> new HashMap<>())
+                                        .put(
+                                                syncEntry,
+                                                new SyncState(
+                                                        (int) (
+                                                                Math.sqrt(
+                                                                        player.distanceToSqr(jePos)
+                                                                ) / 24 + 1
+                                                        )
+                                                )
+                                        );
+                            }
+
                         } else if(endpoint instanceof CircuitBoardEndpoint cbe) {
-                            // Circuits might not have external terminals so they need a special tracking entry
                             var eb = cbe.getElectricBehaviour(world);
                             if (eb == null)
                                 continue;
+
                             var ebPos = eb.getPos();
-                            syncStates.computeIfAbsent(player, $ -> new HashMap<>())
-                                    .put(eb, new SyncState((int) (Math.sqrt(player.distanceToSqr(ebPos.getX(), ebPos.getY(), ebPos.getZ())) / 24 + 1)));
+                            var syncState = new SyncState(
+                                    (int) (
+                                            Math.sqrt(
+                                                    player.distanceToSqr(
+                                                            ebPos.getX(),
+                                                            ebPos.getY(),
+                                                            ebPos.getZ()
+                                                    )
+                                            ) / 24 + 1
+                                    )
+                            );
+
+                            syncStates
+                                    .computeIfAbsent(player, $ -> new HashMap<>())
+                                    .put(eb, syncState);
                         }
                     }
-                    if(entry.getValue().isEmpty()) {
-                        trackerEntryIter.remove();
+                }
+
+                syncTicks = 0;
+            }
+
+            syncTicks++;
+        }
+    }
+
+    public void wireEntityDestroyed(BaseWireEntity entity) {
+        if(entity == null)
+            return;
+
+        var endpoint1 = entity.getEndpoint1();
+        var endpoint2 = entity.getEndpoint2();
+
+        if(endpoint1 != null) {
+            var node1 = endpoint1.getNode(world);
+            var parts = partNodeMap.get(node1);
+
+            if(parts != null) {
+                for(var part : List.copyOf(parts)) {
+                    if(part.owner == entity) {
+                        part.remove();
                     }
                 }
             }
-            for(var entry : syncStates.entrySet()) {
-                boolean useDoubles = NegotiateSyncC2SPacket.useDoubles(entry.getKey());
-                var packet = new StateS2CPacket(useDoubles);
-                var wrapper = packet.wrapper();
-                var behaviours = entry.getValue();
-                for(var pair : behaviours.entrySet()) {
-                    if(syncTicks % pair.getValue().lod() != 0)
-                        continue;
-                    if(pair.getKey() == null || !pair.getKey().shouldSync())
-                        continue;
-                    packet.begin(pair.getKey());
-                    pair.getKey().writeToSync(wrapper, useDoubles, this::findLineMiddle);
-                    packet.end();
-                }
-                ModdedPackets.sendToClient(packet, entry.getKey());
-            }
-            final int syncInterval = ModdedConfigs.common().stateSynchronization.get();
-            if(syncInterval > 0) {
-                if (syncTicks >= syncInterval) {
-                    // TODO: Perhaps we should avoid sending ALL subnetworks at once and instead
-                    //  split the sync up to avoid generating a lot of intermittent network traffic.
-                    for (var network : subnetworks) {
-                        for (var node : network.getNodes()) {
-                            if (!(node instanceof OwnedFloatingNode owned))
-                                continue;
-                            if (!(owned.endpoint instanceof BlockWireEndpoint bwe))
-                                continue;
-                            var behaviour = bwe.getElectricBehaviour(world);
-                            if (behaviour != null)
-                                behaviour.blockEntity.sendData();
-                        }
+        }
+
+        if(endpoint2 != null) {
+            var node2 = endpoint2.getNode(world);
+            var parts = partNodeMap.get(node2);
+
+            if(parts != null) {
+                for(var part : List.copyOf(parts)) {
+                    if(part.owner == entity) {
+                        part.remove();
                     }
-                    syncTicks = 0;
                 }
             }
-            ++syncTicks;
         }
     }
 
