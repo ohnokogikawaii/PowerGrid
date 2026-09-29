@@ -1364,7 +1364,7 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                         line.setNode2(newNode);
 
                         globalGraph.connect(otherNode, newNode, line);
-                        globalGraph.connect(otherNode, newNode, line);
+
 
                         if(ModdedConfigs.logsEnabled()) {
                             PowerGrid.LOGGER.error(
