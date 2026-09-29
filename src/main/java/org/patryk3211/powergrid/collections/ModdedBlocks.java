@@ -420,7 +420,7 @@ public class ModdedBlocks {
             .blockstate(horizontalBlock("block/gauge/conductive/base"))
             .initialProperties(SharedProperties::softMetal)
             .transform(pickaxeOnly())
-            .transform(CResistance.setResistances("range_2kv", 2e7, "range_200v", 2e6, "range_20v", 2e5, "range_2v", 2e4))
+            .transform(CResistance.setResistances("range_20kv", 2e8, "range_2kv", 2e7, "range_200v", 2e6, "range_20v", 2e5, "range_2v", 2e4))
             .transform(DisplaySource.displaySource(ModdedDisplaySources.ELECTRIC_GAUGE))
             .item()
                 .model(gauge("block/gauge/item_voltage", "block/conductive_gauge"))
