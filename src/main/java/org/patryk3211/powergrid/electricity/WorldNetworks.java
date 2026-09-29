@@ -1364,6 +1364,33 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                         line.setNode2(newNode);
 
                         globalGraph.connect(otherNode, newNode, line);
+                        globalGraph.connect(otherNode, newNode, line);
+
+                        if(ModdedConfigs.logsEnabled()) {
+                            PowerGrid.LOGGER.error(
+                                    "[PowerDebug] MIGRATED LINE STATE: " +
+                                            "line={} " +
+                                            "oldNode={} " +
+                                            "newNode={} " +
+                                            "otherNode={} " +
+                                            "newNodeVoltage={}V " +
+                                            "otherNodeVoltage={}V " +
+                                            "lineResistance={}Ohm " +
+                                            "lineNetwork={} " +
+                                            "lineNetworkConverged={}",
+                                    line,
+                                    oldNode,
+                                    newNode,
+                                    otherNode,
+                                    newNode.getVoltage(),
+                                    otherNode.getVoltage(),
+                                    line.getResistance(),
+                                    line.getNetwork() == null
+                                            ? "null"
+                                            : System.identityHashCode(line.getNetwork()),
+                                    line.getNetwork() != null && line.getNetwork().isConverged()
+                            );
+                        }
 
                         if(ModdedConfigs.logsEnabled())
                             PowerGrid.LOGGER.debug(
