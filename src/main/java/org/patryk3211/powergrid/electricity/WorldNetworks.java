@@ -1256,13 +1256,16 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                             if(line.getNode1() == oldNode) {
                                 inNetwork(line.getNetwork(), newNode);
                                 line.setNode1(newNode);
+
                                 if(ModdedConfigs.logsEnabled())
                                     PowerGrid.LOGGER.debug("Line {} has had its node migrated", line);
                             }
+
                         }
                     }
                     if(part.getEndpoint2().equals(endpoint) || part.getNode2() == oldNode) {
                         part.setNode2(newNode);
+
                         if(ModdedConfigs.logsEnabled())
                             PowerGrid.LOGGER.debug("Part {} has had its node migrated", part);
                         var line = part.getLine();
@@ -1289,9 +1292,63 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                         globalGraph.disconnect(oldNode, otherNode, line);
 
                         line.setNode1(newNode);
+                        if(ModdedConfigs.logsEnabled()) {
+                            PowerGrid.LOGGER.error(
+                                    "[PowerDebug] MIGRATED LINE STATE: " +
+                                            "line={} " +
+                                            "oldNode={} " +
+                                            "newNode={} " +
+                                            "otherNode={} " +
+                                            "newNodeVoltage={}V " +
+                                            "otherNodeVoltage={}V " +
+                                            "lineResistance={}Ohm " +
+                                            "lineNetwork={} " +
+                                            "lineNetworkConverged={}",
+                                    line,
+                                    oldNode,
+                                    newNode,
+                                    otherNode,
+                                    newNode.getVoltage(),
+                                    otherNode.getVoltage(),
+                                    line.getResistance(),
+                                    line.getNetwork() == null
+                                            ? "null"
+                                            : System.identityHashCode(line.getNetwork()),
+                                    line.getNetwork() != null && line.getNetwork().isConverged()
+                            );
+                        }
+                        globalGraph.connect(newNode, otherNode, line);
+                        globalGraph.disconnect(oldNode, otherNode, line);
+
+                        line.setNode1(newNode);
 
                         globalGraph.connect(newNode, otherNode, line);
 
+                        if(ModdedConfigs.logsEnabled()) {
+                            PowerGrid.LOGGER.error(
+                                    "[PowerDebug] MIGRATED LINE STATE: " +
+                                            "line={} " +
+                                            "oldNode={} " +
+                                            "newNode={} " +
+                                            "otherNode={} " +
+                                            "newNodeVoltage={}V " +
+                                            "otherNodeVoltage={}V " +
+                                            "lineResistance={}Ohm " +
+                                            "lineNetwork={} " +
+                                            "lineNetworkConverged={}",
+                                    line,
+                                    oldNode,
+                                    newNode,
+                                    otherNode,
+                                    newNode.getVoltage(),
+                                    otherNode.getVoltage(),
+                                    line.getResistance(),
+                                    line.getNetwork() == null
+                                            ? "null"
+                                            : System.identityHashCode(line.getNetwork()),
+                                    line.getNetwork() != null && line.getNetwork().isConverged()
+                            );
+                        }
                         if(ModdedConfigs.logsEnabled())
                             PowerGrid.LOGGER.debug(
                                     "Line {} migrated node1: {} -> {}",
