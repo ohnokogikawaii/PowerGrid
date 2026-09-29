@@ -15,6 +15,7 @@
  */
 package org.patryk3211.powergrid.electricity.sim;
 
+import org.patryk3211.powergrid.PowerGrid;
 import org.patryk3211.powergrid.electricity.sim.node.IElectricNode;
 import org.patryk3211.powergrid.electricity.sim.node.INetworkElement;
 import org.patryk3211.powergrid.electricity.sim.node.INode;
@@ -117,7 +118,34 @@ public abstract class AbstractElectricWire implements INetworkElement, IMultiHoo
     public double current() {
         if(network == null)
             return 0;
-        return potentialDifference() * conductance();
+
+        double voltage1 = node1 == null ? 0 : node1.getVoltage();
+        double voltage2 = node2 == null ? 0 : node2.getVoltage();
+        double voltageDifference = voltage1 - voltage2;
+        double conductance = conductance();
+        double current = voltageDifference * conductance;
+
+        if(Math.abs(current) >= 10_000) {
+            PowerGrid.LOGGER.error(
+                    "[PowerDebug] ABNORMAL CURRENT: class={} current={}A " +
+                            "V1={}V V2={}V dV={}V G={}S " +
+                            "node1={} node2={} index1={} index2={} network={} converged={}",
+                    getClass().getName(),
+                    current,
+                    voltage1,
+                    voltage2,
+                    voltageDifference,
+                    conductance,
+                    node1,
+                    node2,
+                    node1 == null ? -1 : node1.getIndex(),
+                    node2 == null ? -1 : node2.getIndex(),
+                    System.identityHashCode(network),
+                    network.isConverged()
+            );
+        }
+
+        return current;
     }
 
     public double power() {

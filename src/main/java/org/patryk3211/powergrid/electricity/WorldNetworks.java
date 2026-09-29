@@ -1298,6 +1298,7 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
                                     line, oldNode, newNode
                             );
 
+
                     } else if (line.getNode2() == oldNode) {
                         var otherNode = line.getNode1();
 

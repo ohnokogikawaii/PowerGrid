@@ -517,6 +517,28 @@ public class TransmissionLine extends ElectricWire {
         port1.other = port2;
         port2.other = port1;
         var Isum = potentialDifference() * conductance();
+
+        if(Math.abs(Isum) >= 10_000) {
+            PowerGrid.LOGGER.error(
+                    "[PowerDebug] TRANSMISSION PORT INITIAL CURRENT: " +
+                            "line={} current={}A voltageDifference={}V " +
+                            "resistance={}Ohm conductance={}S " +
+                            "node1={} node2={} " +
+                            "node1Voltage={}V node2Voltage={}V " +
+                            "segments={}",
+                    this,
+                    Isum,
+                    potentialDifference(),
+                    getResistance(),
+                    conductance(),
+                    node1,
+                    node2,
+                    node1.getVoltage(),
+                    node2.getVoltage(),
+                    segments.size()
+            );
+        }
+
         port1.I = -(float) (Isum * 0.5f);
         port2.I = -(float) (Isum * 0.5f);
         node1.getNetwork().addNode(port1);

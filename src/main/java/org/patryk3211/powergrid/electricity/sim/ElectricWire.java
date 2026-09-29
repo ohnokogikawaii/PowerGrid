@@ -15,6 +15,7 @@
  */
 package org.patryk3211.powergrid.electricity.sim;
 
+import org.patryk3211.powergrid.PowerGrid;
 import org.patryk3211.powergrid.electricity.sim.node.IElectricNode;
 
 public class ElectricWire extends AbstractElectricWire {
@@ -41,7 +42,21 @@ public class ElectricWire extends AbstractElectricWire {
     @Override
     public double conductance() {
         validateResistance(resistance);
-        return 1 / resistance;
+
+        double conductance = 1 / resistance;
+
+        if(conductance >= 10_000) {
+            PowerGrid.LOGGER.error(
+                    "[PowerDebug] EXTREME CONDUCTANCE: class={} " +
+                            "resistance={}Ohm conductance={}S wire={}",
+                    getClass().getName(),
+                    resistance,
+                    conductance,
+                    this
+            );
+        }
+
+        return conductance;
     }
 
     private static void validateResistance(double resistance) {
