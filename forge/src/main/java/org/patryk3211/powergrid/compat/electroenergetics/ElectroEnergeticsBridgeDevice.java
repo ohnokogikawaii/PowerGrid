@@ -19,10 +19,7 @@ public class ElectroEnergeticsBridgeDevice
     private double lastPowerGridVoltage;
 
     /*
-     * Last current measured by EE through the bridge.
-     *
-     * This is currently only recorded.
-     * It is not yet fed back into Power Grid.
+     * Last current calculated by Electro Energetics.
      */
     private double lastElectroEnergeticsCurrent;
 
@@ -45,7 +42,8 @@ public class ElectroEnergeticsBridgeDevice
      * EE pre-tick
      * ------------------------------------------------------------
      *
-     * Power Grid voltage is converted into an EE voltage source.
+     * Power Grid voltage is supplied to EE as a Thevenin
+     * voltage source.
      *
      * Node 0 = +
      * Node 1 = -
@@ -53,27 +51,7 @@ public class ElectroEnergeticsBridgeDevice
 
     @Override
     public void preTick(BridgeCollector bridges) {
-        double voltage = getPowerGridVoltage();
 
-        lastPowerGridVoltage = voltage;
-
-        /*
-         * A small series resistance prevents the bridge from
-         * behaving as a mathematically ideal zero-resistance
-         * voltage source.
-         *
-         * This can be changed later when the electrical coupling
-         * model is expanded.
-         */
-        double resistance = 0.01;
-
-        bridges.builder(pos)
-                .voltageSourceWithResistance(
-                        0,
-                        1,
-                        resistance,
-                        voltage
-                );
     }
 
     /*
@@ -81,20 +59,37 @@ public class ElectroEnergeticsBridgeDevice
      * EE post-tick
      * ------------------------------------------------------------
      *
-     * Current is currently measured only.
+     * EE has finished solving its circuit here.
      *
-     * Future implementation can use this value to calculate
-     * current/power drawn from the Power Grid network.
+     * Read the actual current flowing through the bridge and
+     * transfer it to the Power Grid side.
      */
 
     @Override
     public void postTick(SimulationResults results) {
-        lastElectroEnergeticsCurrent =
+        double current =
                 results.getCurrentThrough(
                         pos,
                         0,
                         1
                 );
+
+        if (!Double.isFinite(current)) {
+            current = 0.0;
+        }
+
+        lastElectroEnergeticsCurrent = current;
+
+        /*
+         * Transfer the EE current to Power Grid.
+         */
+        if (level != null) {
+            if (level.getBlockEntity(pos)
+                    instanceof ElectroEnergeticsBridgeBlockEntity bridge) {
+
+                bridge.setElectroEnergeticsCurrent(current);
+            }
+        }
     }
 
     /*
@@ -118,7 +113,7 @@ public class ElectroEnergeticsBridgeDevice
 
     /*
      * ------------------------------------------------------------
-     * Debug / future integration accessors
+     * Debug / monitoring accessors
      * ------------------------------------------------------------
      */
 
