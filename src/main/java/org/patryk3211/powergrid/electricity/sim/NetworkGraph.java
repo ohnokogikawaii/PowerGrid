@@ -290,6 +290,143 @@ public class NetworkGraph {
         return false;
     }
 
+    /**
+     * Migrates one wire endpoint from oldNode to newNode without firing
+     * graph modification hooks.
+     *
+     * This is specifically used when an OwnedFloatingNode is recreated
+     * during world loading.
+     *
+     * Normal disconnect/connect must NOT be used here because they invoke
+     * WorldNetworks callbacks which may modify transmission-line management,
+     * perform island discovery or split lines while migration is incomplete.
+     */
+    public boolean migrateWireEndpoint(
+            IElectricNode oldNode,
+            IElectricNode newNode,
+            @NotNull AbstractElectricWire wire
+    ) {
+        if(wire == null || newNode == null)
+            return false;
+
+        if(oldNode == newNode)
+            return true;
+
+        /*
+         * The replacement node must exist in the graph.
+         *
+         * addAndMigrateNode() normally calls addNode() before reaching this
+         * method, but keeping this check here makes the migration operation
+         * safe even when called from another restoration path.
+         */
+        if(!nodes.containsKey(newNode)) {
+            addNode(newNode);
+        }
+
+        var newObject = nodes.get(newNode);
+
+        if(newObject == null)
+            return false;
+
+        /*
+         * Determine which endpoint is actually being migrated.
+         */
+        IElectricNode otherNode;
+
+        if(wire.node1 == oldNode) {
+            otherNode = wire.node2;
+        } else if(wire.node2 == oldNode) {
+            otherNode = wire.node1;
+        } else {
+            /*
+             * The wire no longer references oldNode.
+             *
+             * This can happen when another restoration pass already migrated
+             * it. Treat this as already migrated if the wire references
+             * newNode.
+             */
+            return wire.node1 == newNode || wire.node2 == newNode;
+        }
+
+        /*
+         * Ground is represented by null and is already present in the graph.
+         */
+        if(otherNode != null && !nodes.containsKey(otherNode)) {
+            addNode(otherNode);
+        }
+
+        var otherObject = nodes.get(otherNode);
+
+        if(otherObject == null)
+            return false;
+
+        /*
+         * Remove the old graph bookkeeping.
+         *
+         * oldNode may not exist in the graph anymore. This is important for
+         * the world-reload case which caused the original NPE.
+         */
+        if(oldNode != null) {
+            var oldObject = nodes.get(oldNode);
+
+            if(oldObject != null) {
+                var oldConnections = oldObject.connections.get(otherObject);
+
+                if(oldConnections != null) {
+                    oldConnections.remove(wire);
+
+                    if(oldConnections.isEmpty())
+                        oldObject.connections.remove(otherObject);
+                }
+
+                var reverseConnections =
+                        otherObject.connections.get(oldObject);
+
+                if(reverseConnections != null) {
+                    reverseConnections.remove(wire);
+
+                    if(reverseConnections.isEmpty())
+                        otherObject.connections.remove(oldObject);
+                }
+
+                if(wire instanceof TransmissionLine line) {
+                    oldObject.connectedLines.remove(line);
+                }
+            }
+        }
+
+        /*
+         * Add the connection to the replacement node.
+         *
+         * This is deliberately done directly instead of calling connect().
+         * No hooks are fired.
+         */
+        var newConnections =
+                newObject.connections.computeIfAbsent(
+                        otherObject,
+                        key -> new ArrayList<>()
+                );
+
+        if(!newConnections.contains(wire))
+            newConnections.add(wire);
+
+        var reverseConnections =
+                otherObject.connections.computeIfAbsent(
+                        newObject,
+                        key -> new ArrayList<>()
+                );
+
+        if(!reverseConnections.contains(wire))
+            reverseConnections.add(wire);
+
+        if(wire instanceof TransmissionLine line) {
+            newObject.connectedLines.add(line);
+            otherObject.connectedLines.add(line);
+        }
+
+        return true;
+    }
+
     @NotNull
     public Collection<TransmissionLine> getConnectedLines(IElectricNode node) {
         if(!nodes.containsKey(node))

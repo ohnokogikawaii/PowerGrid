@@ -30,7 +30,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.patryk3211.powergrid.PowerGrid;
 import org.patryk3211.powergrid.collections.ModdedConfigs;
-import org.patryk3211.powergrid.collections.ModdedPackets;
 import org.patryk3211.powergrid.config.CSolver;
 import org.patryk3211.powergrid.electricity.base.ElectricBehaviour;
 import org.patryk3211.powergrid.electricity.base.IMultipartSync;
@@ -41,8 +40,6 @@ import org.patryk3211.powergrid.electricity.sim.special.TransmissionLine;
 import org.patryk3211.powergrid.electricity.sim.special.TransmissionLinePart;
 import org.patryk3211.powergrid.electricity.sim.special.TransmissionLinePort;
 import org.patryk3211.powergrid.electricity.wire.*;
-import org.patryk3211.powergrid.network.packets.NegotiateSyncC2SPacket;
-import org.patryk3211.powergrid.network.packets.StateS2CPacket;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1233,197 +1230,403 @@ public class WorldNetworks extends SavedData implements NetworkGraph.IGraphModif
         }
     }
 
-    public void addAndMigrateNode(OwnedFloatingNode oldNode, OwnedFloatingNode newNode) {
+    public void addAndMigrateNode(
+            OwnedFloatingNode oldNode,
+            OwnedFloatingNode newNode
+    ) {
         if(newNode == null)
             return;
+
+        if(oldNode == newNode)
+            return;
+
         var endpoint = newNode.endpoint;
-        if(oldNode != null && oldNode != newNode) {
-            // Migrate connections into the new node.
-            // This happens when a block entity is loaded but its terminal was acting as a transmission line junction.
-            if(ModdedConfigs.logsEnabled())
-                PowerGrid.LOGGER.debug("Migrating external node from {} to {}", oldNode, newNode);
+
+        /*
+         * The new node must always be registered before any transmission-line
+         * endpoint is moved to it.
+         *
+         * This is especially important after world reload because the
+         * OwnedFloatingNode object may have been recreated while the graph
+         * still contains the old object or no object at all.
+         */
+        globalGraph.addNode(newNode);
+
+        if(ModdedConfigs.logsEnabled()) {
+            PowerGrid.LOGGER.debug(
+                    "Migrating external node from {} to {}",
+                    oldNode,
+                    newNode
+            );
+        }
+
+        /*
+         * ------------------------------------------------------------
+         * 1. Migrate TransmissionLinePart bookkeeping.
+         * ------------------------------------------------------------
+         */
+        if(oldNode != null) {
             var parts = partNodeMap.remove(oldNode);
+
             if(parts != null) {
-                for(TransmissionLinePart part : parts) {
-                    if(ModdedConfigs.logsEnabled())
-                        PowerGrid.LOGGER.debug("Migrating node for part {}", part);
-                    if(part.getEndpoint1().equals(endpoint) || part.getNode1() == oldNode) {
+                for(var part : List.copyOf(parts)) {
+                    if(part == null)
+                        continue;
+
+                    boolean endpoint1 =
+                            part.getEndpoint1() != null &&
+                                    part.getEndpoint1().equals(endpoint);
+
+                    boolean endpoint2 =
+                            part.getEndpoint2() != null &&
+                                    part.getEndpoint2().equals(endpoint);
+
+                    /*
+                     * The node object can be stale while the endpoint itself
+                     * is still identical. Endpoint equality therefore has
+                     * priority over object identity here.
+                     */
+                    if(endpoint1 || part.getNode1() == oldNode) {
                         part.setNode1(newNode);
-                        if(ModdedConfigs.logsEnabled())
-                            PowerGrid.LOGGER.debug("Part {} has had its node migrated", part);
-                        var line = part.getLine();
-                        if(line != null) {
-                            if(line.getNode1() == oldNode) {
-                                inNetwork(line.getNetwork(), newNode);
-                                line.setNode1(newNode);
 
-                                if(ModdedConfigs.logsEnabled())
-                                    PowerGrid.LOGGER.debug("Line {} has had its node migrated", line);
-                            }
-
+                        if(ModdedConfigs.logsEnabled()) {
+                            PowerGrid.LOGGER.debug(
+                                    "Migrated part node1: {} -> {} for {}",
+                                    oldNode,
+                                    newNode,
+                                    part
+                            );
                         }
                     }
-                    if(part.getEndpoint2().equals(endpoint) || part.getNode2() == oldNode) {
+
+                    if(endpoint2 || part.getNode2() == oldNode) {
                         part.setNode2(newNode);
 
-                        if(ModdedConfigs.logsEnabled())
-                            PowerGrid.LOGGER.debug("Part {} has had its node migrated", part);
-                        var line = part.getLine();
-                        if(line != null) {
-                            if(line.getNode2() == oldNode) {
-                                inNetwork(line.getNetwork(), newNode);
-                                line.setNode2(newNode);
-                                if(ModdedConfigs.logsEnabled())
-                                    PowerGrid.LOGGER.debug("Line {} has had its node migrated", line);
-                            }
+                        if(ModdedConfigs.logsEnabled()) {
+                            PowerGrid.LOGGER.debug(
+                                    "Migrated part node2: {} -> {} for {}",
+                                    oldNode,
+                                    newNode,
+                                    part
+                            );
                         }
                     }
-                    partNodeMap.computeIfAbsent(newNode, $ -> new HashSet<>()).add(part);
+
+                    partNodeMap
+                            .computeIfAbsent(
+                                    newNode,
+                                    $ -> new HashSet<>()
+                            )
+                            .add(part);
                 }
             }
-            if(oldNode.getNetwork() != null) {
-                inNetwork(oldNode.getNetwork(), newNode);
-                var unified = oldNode.getNetwork();
-                var lines = List.copyOf(globalGraph.getConnectedLines(oldNode));
-                for (var line : lines) {
-                    if (line.getNode1() == oldNode) {
-                        var otherNode = line.getNode2();
+        }
 
-                        globalGraph.disconnect(oldNode, otherNode, line);
+        /*
+         * ------------------------------------------------------------
+         * 2. Migrate the electrical network.
+         * ------------------------------------------------------------
+         *
+         * oldNode can legitimately be null.
+         *
+         * This is the exact situation which previously caused:
+         *
+         * Cannot invoke "OwnedFloatingNode.getNetwork()"
+         * because "oldNode" is null
+         */
+        ElectricalNetwork unified = null;
 
-                        line.setNode1(newNode);
-                        if(ModdedConfigs.logsEnabled()) {
-                            PowerGrid.LOGGER.error(
-                                    "[PowerDebug] MIGRATED LINE STATE: " +
-                                            "line={} " +
-                                            "oldNode={} " +
-                                            "newNode={} " +
-                                            "otherNode={} " +
-                                            "newNodeVoltage={}V " +
-                                            "otherNodeVoltage={}V " +
-                                            "lineResistance={}Ohm " +
-                                            "lineNetwork={} " +
-                                            "lineNetworkConverged={}",
-                                    line,
-                                    oldNode,
-                                    newNode,
-                                    otherNode,
-                                    newNode.getVoltage(),
-                                    otherNode.getVoltage(),
-                                    line.getResistance(),
-                                    line.getNetwork() == null
-                                            ? "null"
-                                            : System.identityHashCode(line.getNetwork()),
-                                    line.getNetwork() != null && line.getNetwork().isConverged()
-                            );
-                        }
-                        globalGraph.connect(newNode, otherNode, line);
-                        globalGraph.disconnect(oldNode, otherNode, line);
+        if(oldNode != null && oldNode.getNetwork() != null) {
+            var oldNetwork = oldNode.getNetwork();
 
-                        line.setNode1(newNode);
+            inNetwork(oldNetwork, newNode);
 
-                        globalGraph.connect(newNode, otherNode, line);
+            /*
+             * inNetwork() may merge networks. Re-read the network after
+             * that operation instead of assuming the original object is
+             * still the active network.
+             */
+            unified = newNode.getNetwork();
 
-                        if(ModdedConfigs.logsEnabled()) {
-                            PowerGrid.LOGGER.error(
-                                    "[PowerDebug] MIGRATED LINE STATE: " +
-                                            "line={} " +
-                                            "oldNode={} " +
-                                            "newNode={} " +
-                                            "otherNode={} " +
-                                            "newNodeVoltage={}V " +
-                                            "otherNodeVoltage={}V " +
-                                            "lineResistance={}Ohm " +
-                                            "lineNetwork={} " +
-                                            "lineNetworkConverged={}",
-                                    line,
-                                    oldNode,
-                                    newNode,
-                                    otherNode,
-                                    newNode.getVoltage(),
-                                    otherNode.getVoltage(),
-                                    line.getResistance(),
-                                    line.getNetwork() == null
-                                            ? "null"
-                                            : System.identityHashCode(line.getNetwork()),
-                                    line.getNetwork() != null && line.getNetwork().isConverged()
-                            );
-                        }
-                        if(ModdedConfigs.logsEnabled())
-                            PowerGrid.LOGGER.debug(
-                                    "Line {} migrated node1: {} -> {}",
-                                    line, oldNode, newNode
-                            );
+            if(unified == null)
+                unified = oldNetwork;
+        } else if(newNode.getNetwork() != null) {
+            unified = newNode.getNetwork();
+        }
 
+        /*
+         * ------------------------------------------------------------
+         * 3. Migrate graph connections.
+         * ------------------------------------------------------------
+         *
+         * Never use:
+         *
+         *   globalGraph.disconnect(...)
+         *   globalGraph.connect(...)
+         *
+         * here.
+         *
+         * Those methods invoke lineDisconnected()/lineConnected(), which
+         * can modify transmissionLines, split lines and schedule island
+         * discovery while this migration is still incomplete.
+         */
+        if(oldNode != null) {
+            var connectedLines =
+                    List.copyOf(
+                            globalGraph.getConnectedLines(oldNode)
+                    );
 
-                    } else if (line.getNode2() == oldNode) {
-                        var otherNode = line.getNode1();
+            for(var line : connectedLines) {
+                if(line == null)
+                    continue;
 
-                        globalGraph.disconnect(otherNode, oldNode, line);
+                if(line.getNode1() == oldNode) {
+                    migrateTransmissionLineEndpoint(
+                            oldNode,
+                            newNode,
+                            line,
+                            true
+                    );
 
-                        line.setNode2(newNode);
+                } else if(line.getNode2() == oldNode) {
+                    migrateTransmissionLineEndpoint(
+                            oldNode,
+                            newNode,
+                            line,
+                            false
+                    );
 
-                        globalGraph.connect(otherNode, newNode, line);
+                } else {
+                    /*
+                     * The graph still contained the line, but the line itself
+                     * no longer references oldNode. This is stale bookkeeping.
+                     */
+                    PowerGrid.LOGGER.warn(
+                            "[PowerDebug] Stale graph connection during node migration: " +
+                                    "line={} oldNode={} newNode={}",
+                            line,
+                            oldNode,
+                            newNode
+                    );
+                }
+            }
+        }
 
+        /*
+         * ------------------------------------------------------------
+         * 4. Recover TransmissionLinePart references which were already
+         *    connected to a TransmissionLine.
+         * ------------------------------------------------------------
+         *
+         * This handles the case where partNodeMap and the graph were
+         * reconstructed in different orders during world loading.
+         */
+        var newParts = partNodeMap.get(newNode);
 
-                        if(ModdedConfigs.logsEnabled()) {
-                            PowerGrid.LOGGER.error(
-                                    "[PowerDebug] MIGRATED LINE STATE: " +
-                                            "line={} " +
-                                            "oldNode={} " +
-                                            "newNode={} " +
-                                            "otherNode={} " +
-                                            "newNodeVoltage={}V " +
-                                            "otherNodeVoltage={}V " +
-                                            "lineResistance={}Ohm " +
-                                            "lineNetwork={} " +
-                                            "lineNetworkConverged={}",
-                                    line,
-                                    oldNode,
-                                    newNode,
-                                    otherNode,
-                                    newNode.getVoltage(),
-                                    otherNode.getVoltage(),
-                                    line.getResistance(),
-                                    line.getNetwork() == null
-                                            ? "null"
-                                            : System.identityHashCode(line.getNetwork()),
-                                    line.getNetwork() != null && line.getNetwork().isConverged()
-                            );
-                        }
+        if(newParts != null) {
+            for(var part : List.copyOf(newParts)) {
+                if(part == null)
+                    continue;
 
-                        if(ModdedConfigs.logsEnabled())
-                            PowerGrid.LOGGER.debug(
-                                    "Line {} migrated node2: {} -> {}",
-                                    line, oldNode, newNode
-                            );
+                var line = part.getLine();
 
-                    } else {
-                        PowerGrid.LOGGER.warn(
-                                "Line connected to old node in graph, but doesn't have it as an endpoint?"
+                if(line == null)
+                    continue;
+
+                if(
+                        line.getNode1() == oldNode &&
+                                oldNode != null
+                ) {
+                    migrateTransmissionLineEndpoint(
+                            oldNode,
+                            newNode,
+                            line,
+                            true
+                    );
+
+                } else if(
+                        line.getNode2() == oldNode &&
+                                oldNode != null
+                ) {
+                    migrateTransmissionLineEndpoint(
+                            oldNode,
+                            newNode,
+                            line,
+                            false
+                    );
+                }
+            }
+        }
+
+        /*
+         * ------------------------------------------------------------
+         * 5. Remove the old graph node only after every connection has
+         *    been migrated.
+         * ------------------------------------------------------------
+         */
+        if(oldNode != null) {
+            if(globalGraph.getConnectedLines(oldNode).isEmpty()) {
+                globalGraph.removeNode(oldNode);
+            } else {
+                PowerGrid.LOGGER.warn(
+                        "[PowerDebug] Old node still has graph connections after migration: " +
+                                "oldNode={} newNode={} lines={}",
+                        oldNode,
+                        newNode,
+                        globalGraph.getConnectedLines(oldNode).size()
+                );
+            }
+
+            /*
+             * Do not call oldNode.getNetwork() again here unless it is known
+             * to be non-null. The node may already have been removed from its
+             * network during a merge.
+             */
+            if(unified != null && oldNode.getNetwork() == unified) {
+                unified.removeNode(oldNode);
+            }
+        }
+
+        /*
+         * ------------------------------------------------------------
+         * 6. Final consistency check.
+         * ------------------------------------------------------------
+         */
+        var finalParts = partNodeMap.get(newNode);
+
+        if(finalParts != null) {
+            for(var part : finalParts) {
+                if(part == null)
+                    continue;
+
+                var line = part.getLine();
+
+                if(line == null)
+                    continue;
+
+                if(line.getNode1() == newNode ||
+                        line.getNode2() == newNode) {
+
+                    if(ModdedConfigs.logsEnabled()) {
+                        PowerGrid.LOGGER.debug(
+                                "[PowerDebug] Node migration verified: " +
+                                        "part={} line={} newNode={}",
+                                System.identityHashCode(part),
+                                line,
+                                newNode
                         );
                     }
                 }
-                unified.removeNode(oldNode);
-            } else {
-                // TODO: This is also redundant, segments already have their nodes updated.
-                var line = findLineMiddle(oldNode);
-                if(line != null) {
-                    for (var segment : line.segments) {
-                        if (segment.getNode1() == oldNode || segment.getEndpoint1().equals(endpoint)) {
-                            movePartMap(segment.getNode1(), newNode, segment);
-                            segment.setNode1(newNode);
-                            if(ModdedConfigs.logsEnabled())
-                                PowerGrid.LOGGER.debug("Line {} has had its internal node migrated", line);
-                        } else if (segment.getNode2() == oldNode || segment.getEndpoint2().equals(endpoint)) {
-                            movePartMap(segment.getNode2(), newNode, segment);
-                            segment.setNode2(newNode);
-                            if(ModdedConfigs.logsEnabled())
-                                PowerGrid.LOGGER.debug("Line {} has had its internal node migrated", line);
-                        }
-                    }
-                }
             }
+        }
+    }
+
+    /**
+     * Moves one TransmissionLine endpoint from an old node to its replacement
+     * without invoking NetworkGraph disconnect/connect hooks.
+     *
+     * This method is used exclusively for node restoration/migration.
+     */
+    private void migrateTransmissionLineEndpoint(
+            OwnedFloatingNode oldNode,
+            OwnedFloatingNode newNode,
+            TransmissionLine line,
+            boolean firstEndpoint
+    ) {
+        if(line == null || newNode == null)
+            return;
+
+        if(oldNode == null)
+            return;
+
+        if(firstEndpoint) {
+            if(line.getNode1() != oldNode)
+                return;
+        } else {
+            if(line.getNode2() != oldNode)
+                return;
+        }
+
+        /*
+         * Make sure the replacement node exists in the graph.
+         */
+        globalGraph.addNode(newNode);
+
+        /*
+         * Make sure the opposite endpoint exists as well.
+         */
+        var otherNode =
+                firstEndpoint
+                        ? line.getNode2()
+                        : line.getNode1();
+
+        if(otherNode != null)
+            globalGraph.addNode(otherNode);
+
+        /*
+         * Move the graph bookkeeping without invoking graph hooks.
+         */
+        boolean migrated =
+                globalGraph.migrateWireEndpoint(
+                        oldNode,
+                        newNode,
+                        line
+                );
+
+        if(!migrated) {
+            PowerGrid.LOGGER.warn(
+                    "[PowerDebug] Failed to migrate graph endpoint: " +
+                            "line={} oldNode={} newNode={} firstEndpoint={}",
+                    line,
+                    oldNode,
+                    newNode,
+                    firstEndpoint
+            );
+            return;
+        }
+
+        /*
+         * Only change the TransmissionLine object after its graph
+         * bookkeeping has been successfully migrated.
+         */
+        if(firstEndpoint) {
+            line.setNode1(newNode);
+        } else {
+            line.setNode2(newNode);
+        }
+
+        if(ModdedConfigs.logsEnabled()) {
+            var other =
+                    firstEndpoint
+                            ? line.getNode2()
+                            : line.getNode1();
+
+            PowerGrid.LOGGER.debug(
+                    "[PowerDebug] MIGRATED LINE STATE: " +
+                            "line={} " +
+                            "oldNode={} " +
+                            "newNode={} " +
+                            "otherNode={} " +
+                            "newNodeVoltage={}V " +
+                            "otherNodeVoltage={}V " +
+                            "lineResistance={}Ohm " +
+                            "lineNetwork={} " +
+                            "lineNetworkConverged={}",
+                    line,
+                    oldNode,
+                    newNode,
+                    other,
+                    newNode.getVoltage(),
+                    other == null ? 0 : other.getVoltage(),
+                    line.getResistance(),
+                    line.getNetwork() == null
+                            ? "null"
+                            : System.identityHashCode(
+                            line.getNetwork()
+                    ),
+                    line.getNetwork() != null &&
+                            line.getNetwork().isConverged()
+            );
         }
     }
 
