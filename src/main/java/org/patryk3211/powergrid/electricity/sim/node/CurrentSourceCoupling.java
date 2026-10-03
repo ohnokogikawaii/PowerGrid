@@ -16,6 +16,7 @@
 
 package org.patryk3211.powergrid.electricity.sim.node;
 
+import org.patryk3211.powergrid.electricity.sim.solver.IAdmittanceAdder;
 import org.patryk3211.powergrid.electricity.sim.solver.IResidualAdder;
 import org.patryk3211.powergrid.electricity.sim.solver.IStaticResidual;
 
@@ -23,24 +24,23 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Two-terminal ideal current source.
+ * Ideal two-terminal current source.
  *
- * Positive current flows from positive to negative.
+ * The coupling node has an auxiliary current variable.
  *
- * This is intended to represent an externally calculated current
- * flowing between two Power Grid nodes.
+ * The MNA equations are:
+ *
+ *   I = current
+ *
+ * and the current is injected into the positive terminal
+ * and removed from the negative terminal.
  */
-public class CurrentSourceCoupling
-        extends CouplingNode
-        implements IStaticResidual {
+public class CurrentSourceCoupling extends CouplingNode implements IStaticResidual {
 
     protected final IElectricNode positive;
     protected final IElectricNode negative;
 
-    /**
-     * Current flowing from positive -> negative.
-     */
-    protected double current;
+    private double current;
 
     public CurrentSourceCoupling(
             IElectricNode positive,
@@ -66,16 +66,14 @@ public class CurrentSourceCoupling
         return true;
     }
 
-    /**
-     * Set current flowing from positive -> negative.
-     */
     public void setCurrent(double current) {
+        if (!Double.isFinite(current)) {
+            current = 0.0;
+        }
+
         this.current = current;
     }
 
-    /**
-     * Get current flowing from positive -> negative.
-     */
     public double getCurrent() {
         return current;
     }
@@ -88,13 +86,53 @@ public class CurrentSourceCoupling
         return negative;
     }
 
+    /**
+     * Build the MNA equations for the current source.
+     *
+     * The coupling node itself represents the current I.
+     *
+     * Positive terminal:
+     *
+     *     +I
+     *
+     * Negative terminal:
+     *
+     *     -I
+     *
+     * Coupling-node equation:
+     *
+     *     I = current
+     *
+     * This last equation is important. Without it the auxiliary
+     * current row would be completely empty and the MNA matrix
+     * would become singular.
+     */
     @Override
-    public void couple(
-            org.patryk3211.powergrid.electricity.sim.solver.IAdmittanceAdder admittance
-    ) {
-        /*
-         * Ideal current source does not modify the admittance matrix.
-         */
+    public void couple(IAdmittanceAdder admittance) {
+
+        // Current flowing into the positive terminal.
+        admittance.add(
+                positive.getIndex(),
+                index,
+                1
+        );
+
+        // Current flowing out of the negative terminal.
+        admittance.add(
+                negative.getIndex(),
+                index,
+                -1
+        );
+
+        // Auxiliary current variable:
+        //
+        //     I = current
+        //
+        admittance.add(
+                index,
+                index,
+                1
+        );
     }
 
     @Override
@@ -105,24 +143,16 @@ public class CurrentSourceCoupling
         );
     }
 
+    /**
+     * Set the right-hand side of:
+     *
+     *     I = current
+     */
     @Override
     public void addStaticResidual(IResidualAdder residual) {
-        /*
-         * Positive current means:
-         *
-         *      positive -----> negative
-         *
-         * Therefore current leaves the positive node and enters
-         * the negative node.
-         */
         residual.add(
-                positive.getIndex(),
+                index,
                 current
-        );
-
-        residual.add(
-                negative.getIndex(),
-                -current
         );
     }
 
